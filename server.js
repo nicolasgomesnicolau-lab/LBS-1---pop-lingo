@@ -238,11 +238,43 @@ http.createServer((req, res) => {
     return all;
   }
 
+  function parseEntityTracks(entity) {
+    if (!entity || typeof entity !== 'object') return [];
+    var tracks = [];
+    var list = entity.trackList || entity.tracks || [];
+    if (!Array.isArray(list)) {
+      if (list.items && Array.isArray(list.items)) list = list.items;
+      else return [];
+    }
+    for (var i = 0; i < list.length && i < 100; i++) {
+      var item = list[i];
+      if (!item) continue;
+      var trackObj = item.track || item;
+      var title = trackObj.title || trackObj.name || '';
+      var artist = '';
+      if (trackObj.subtitle) {
+        artist = trackObj.subtitle;
+      } else if (trackObj.artists) {
+        var arr = Array.isArray(trackObj.artists) ? trackObj.artists : (trackObj.artists.items || []);
+        artist = arr.map(function(a) { return a.name || ''; }).filter(Boolean).join(', ');
+      }
+      if (title) tracks.push({ title: title, artist: artist || 'Unknown' });
+    }
+    return tracks;
+  }
+
   async function parseSpotifyTracks(playlistId) {
-    var resp = await fetch('https://open.spotify.com/playlist/' + playlistId, {
+    // Tenta a página embed primeiro (mais estável)
+    var resp = await fetch('https://open.spotify.com/embed/playlist/' + playlistId, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/53736', 'Accept': 'text/html,application/xhtml+xml', 'Accept-Language': 'en-US,en;q=0.9' }
     });
-    if (!resp.ok) return { status: 'error', message: 'Spotify retornou status ' + resp.status + '. A playlist pode ser privada ou inexistente.' };
+    if (!resp.ok) {
+      // Fallback: tenta a página normal
+      resp = await fetch('https://open.spotify.com/playlist/' + playlistId, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/53736', 'Accept': 'text/html,application/xhtml+xml', 'Accept-Language': 'en-US,en;q=0.9' }
+      });
+      if (!resp.ok) return { status: 'error', message: 'Spotify retornou status ' + resp.status + '. A playlist pode ser privada ou inexistente.' };
+    }
     var html = await resp.text();
 
     var nameMatch = html.match(/<title>([^<]+)<\/title>/);
@@ -250,16 +282,30 @@ http.createServer((req, res) => {
 
     var tracks = [];
 
-    // Method 1: __NEXT_DATA__
+    // Method 1: __NEXT_DATA__ — caminho específico do embed (props > pageProps > state > data > entity)
     var ndMatch = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
     if (ndMatch) {
       try {
         var nd = JSON.parse(ndMatch[1]);
-        tracks = walkTree(nd.props || nd, 100);
+        var entity = nd;
+        if (nd.props) entity = nd.props;
+        if (entity.pageProps) entity = entity.pageProps;
+        if (entity.state) entity = entity.state;
+        if (entity.data) entity = entity.data;
+        if (entity.entity) entity = entity.entity;
+        tracks = parseEntityTracks(entity);
       } catch (e) {}
     }
 
-    // Method 2: all JSON <script> tags
+    // Method 2: walkTree genérico no __NEXT_DATA__
+    if (tracks.length === 0 && ndMatch) {
+      try {
+        var nd2 = JSON.parse(ndMatch[1]);
+        tracks = walkTree(nd2.props || nd2, 100);
+      } catch (e) {}
+    }
+
+    // Method 3: todos os JSON <script> tags
     if (tracks.length === 0) {
       var jsonScripts = extractAllJsonScripts(html);
       for (var js = 0; js < jsonScripts.length && tracks.length === 0; js++) {
@@ -267,28 +313,27 @@ http.createServer((req, res) => {
       }
     }
 
-    // Method 3: regex — "name" + "uri" containing spotify:track:
+    // Method 4: regex — "name" + "uri" contendo spotify:track:
     if (tracks.length === 0) {
-      var rx3 = /"name"\s*:\s*"((?:[^"\\]|\\.)*)"[\s\S]{0,200}"uri"\s*:\s*"spotify:track:[^"]+"/g;
-      var m3;
-      while ((m3 = rx3.exec(html)) !== null) {
-        var t3 = m3[1].replace(/\\"/g, '"').replace(/\\u0026/g, '&');
-        if (t3 && t3.length < 200) tracks.push({ title: t3, artist: '' });
+      var rx4 = /"name"\s*:\s*"((?:[^"\\]|\\.)*)"[\s\S]{0,200}"uri"\s*:\s*"spotify:track:[^"]+"/g;
+      var m4;
+      while ((m4 = rx4.exec(html)) !== null) {
+        var t4 = m4[1].replace(/\\"/g, '"').replace(/\\u0026/g, '&');
+        if (t4 && t4.length < 200) tracks.push({ title: t4, artist: '' });
       }
     }
 
-    // Method 4: regex no HTML bruto — track + artist name
+    // Method 5: regex bruto — track + artist
     if (tracks.length === 0) {
-      var rx4 = /"track"\s*:\s*\{[\s\S]{0,500}"name"\s*:\s*"((?:[^"\\]|\\.)*)"[\s\S]{0,300}"name"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
-      var m4;
-      while ((m4 = rx4.exec(html)) !== null) {
-        var tn = m4[1].replace(/\\"/g, '"').replace(/\\u0026/g, '&');
-        var an = m4[2].replace(/\\"/g, '"').replace(/\\u0026/g, '&');
+      var rx5 = /"track"\s*:\s*\{[\s\S]{0,500}"name"\s*:\s*"((?:[^"\\]|\\.)*)"[\s\S]{0,300}"name"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+      var m5;
+      while ((m5 = rx5.exec(html)) !== null) {
+        var tn = m5[1].replace(/\\"/g, '"').replace(/\\u0026/g, '&');
+        var an = m5[2].replace(/\\"/g, '"').replace(/\\u0026/g, '&');
         if (tn && an && tn.length < 200 && an.length < 200) tracks.push({ title: tn, artist: an });
       }
     }
 
-    // Dedup
     var seen = {};
     var unique = [];
     for (var i = 0; i < tracks.length; i++) {
