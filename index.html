@@ -109,6 +109,9 @@
   <script src="js/chat.js"></script>
   <script src="js/app.js"></script>
 
+  <!-- YouTube IFrame Player API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
   <!-- Sound Test -->
   <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -147,6 +150,14 @@
       }
     });
   });
+  
+  // Global YouTube IFrame API Ready Callback
+  window.onYouTubeIframeAPIReady = function() {
+    if (typeof MoviesTab !== 'undefined' && MoviesTab.onYouTubeIframeAPIReady) {
+      MoviesTab.onYouTubeIframeAPIReady();
+    }
+  };
+
   </script>
 
 </body>
