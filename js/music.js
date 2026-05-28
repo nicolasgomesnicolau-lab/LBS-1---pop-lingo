@@ -463,6 +463,7 @@ const MusicTab = (() => {
         if (s.fromSpotify && !s.videoId && !s.searching) hasSpotifyUnsearched = true;
       }
       resultsHtml += '</div></div>';
+      resultsHtml += '<button class="btn btn-secondary btn-block mb-base" id="clear-results-btn">✕ Limpar resultados</button>';
       if (hasSpotifyUnsearched && !spotifySearchAll) {
         resultsHtml += '<button class="btn btn-primary btn-block mb-base" id="spotify-search-all-btn">🔍 Buscar todas no YouTube</button>';
       }
@@ -707,6 +708,14 @@ const MusicTab = (() => {
 
     var searchAllBtn = container.querySelector('#spotify-search-all-btn');
     if (searchAllBtn) searchAllBtn.addEventListener('click', spotifySearchAllTracks);
+
+    var clearBtn = container.querySelector('#clear-results-btn');
+    if (clearBtn) clearBtn.addEventListener('click', function() {
+      searchResults = [];
+      searchQuery = '';
+      spotifySearchAll = false;
+      App.refreshCurrentTab();
+    });
 
     var items = container.querySelectorAll('[data-action="play"]');
     for (var i = 0; i < items.length; i++) {
