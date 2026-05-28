@@ -179,9 +179,68 @@ http.createServer((req, res) => {
     return;
   }
 
+  function extractTrack(node) {
+    if (!node || typeof node !== 'object') return null;
+    var uri = node.uri;
+    var name = node.name;
+    var isTrack = (typeof uri === 'string' && uri.indexOf('spotify:track:') === 0) || node.type === 'track' || node.__typename === 'Track';
+    if (!isTrack || !name) return null;
+    var artistName = '';
+    if (node.artists) {
+      var arr = Array.isArray(node.artists) ? node.artists : (node.artists.items || []);
+      if (arr.length > 0) {
+        artistName = arr[0].name || (arr[0].profile && arr[0].profile.name) || '';
+      }
+    }
+    return { title: name, artist: artistName };
+  }
+
+  function walkTree(root, max) {
+    var results = [];
+    var stack = [root];
+    var seen = new Set();
+    while (stack.length > 0 && results.length < max) {
+      var node = stack.pop();
+      if (!node || typeof node !== 'object' || seen.has(node)) continue;
+      seen.add(node);
+      if (Array.isArray(node)) {
+        for (var i = node.length - 1; i >= 0; i--) stack.push(node[i]);
+      } else {
+        var t = extractTrack(node);
+        if (t && t.title && t.artist) { results.push(t); continue; }
+        if (node.track && typeof node.track === 'object') stack.push(node.track);
+        var keys = Object.keys(node);
+        for (var i = keys.length - 1; i >= 0; i--) {
+          var val = node[keys[i]];
+          if (typeof val === 'object' && val !== null) stack.push(val);
+        }
+      }
+    }
+    return results;
+  }
+
+  function extractAllJsonScripts(html) {
+    var scripts = html.match(/<script[^>]*>([\s\S]*?)<\/script>/g) || [];
+    var all = [];
+    for (var si = 0; si < scripts.length; si++) {
+      var content = scripts[si].replace(/^<script[^>]*>/, '').replace(/<\/script>$/, '').trim();
+      if (!content) continue;
+      if (content.charAt(0) === '{' || content.charAt(0) === '[') {
+        try { all.push(JSON.parse(content)); } catch(e) {}
+      } else if (content.indexOf('window.__INITIAL_STATE__') !== -1 || content.indexOf('window.__remixContext') !== -1) {
+        var eqIdx = content.indexOf('=');
+        if (eqIdx > 0) {
+          var jsonStr = content.slice(eqIdx + 1).trim().replace(/;$/,'');
+          try { all.push(JSON.parse(jsonStr)); } catch(e) {}
+        }
+      }
+    }
+    return all;
+  }
+
   async function parseSpotifyTracks(playlistId) {
     var resp = await fetch('https://open.spotify.com/playlist/' + playlistId, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Accept': 'text/html,application/xhtml+xml', 'Accept-Language': 'en-US,en;q=0.9' }
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/53736', 'Accept': 'text/html,application/xhtml+xml', 'Accept-Language': 'en-US,en;q=0.9' }
     });
     if (!resp.ok) return { status: 'error', message: 'Spotify retornou status ' + resp.status + '. A playlist pode ser privada ou inexistente.' };
     var html = await resp.text();
@@ -191,49 +250,41 @@ http.createServer((req, res) => {
 
     var tracks = [];
 
-    // Method 1: __NEXT_DATA__ (Next.js — padrão do Spotify)
+    // Method 1: __NEXT_DATA__
     var ndMatch = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
     if (ndMatch) {
       try {
         var nd = JSON.parse(ndMatch[1]);
-        var stack = [nd.props || nd];
-        var seen = new Set();
-        while (stack.length > 0 && tracks.length < 100) {
-          var node = stack.pop();
-          if (!node || typeof node !== 'object' || seen.has(node)) continue;
-          seen.add(node);
-          if (Array.isArray(node)) {
-            for (var i = node.length - 1; i >= 0; i--) stack.push(node[i]);
-          } else {
-            var isTrack = node.type === 'track' || (node.uri && typeof node.uri === 'string' && node.uri.indexOf('spotify:track:') === 0);
-            if (isTrack && node.name) {
-              var artistName = '';
-              if (node.artists) {
-                var arr = Array.isArray(node.artists) ? node.artists : (node.artists.items || []);
-                if (arr.length > 0) artistName = arr[0].name || (arr[0].profile && arr[0].profile.name) || '';
-              }
-              tracks.push({ title: node.name, artist: artistName });
-              continue;
-            }
-            if (node.track && typeof node.track === 'object') stack.push(node.track);
-            var keys = Object.keys(node);
-            for (var i = keys.length - 1; i >= 0; i--) {
-              var val = node[keys[i]];
-              if (typeof val === 'object' && val !== null) stack.push(val);
-            }
-          }
-        }
+        tracks = walkTree(nd.props || nd, 100);
       } catch (e) {}
     }
 
-    // Fallback: regex simples no HTML bruto
+    // Method 2: all JSON <script> tags
     if (tracks.length === 0) {
-      var rx = /"name"\s*:\s*"((?:[^"\\]|\\.)*)"[\s\S]{0,100}"artists"\s*:\s*\[[\s\S]{0,200}"name"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
-      var m;
-      while ((m = rx.exec(html)) !== null) {
-        var t = m[1].replace(/\\"/g, '"').replace(/\\u0026/g, '&');
-        var a = m[2].replace(/\\"/g, '"').replace(/\\u0026/g, '&');
-        if (t && a && t.length < 200 && a.length < 200) tracks.push({ title: t, artist: a });
+      var jsonScripts = extractAllJsonScripts(html);
+      for (var js = 0; js < jsonScripts.length && tracks.length === 0; js++) {
+        tracks = walkTree(jsonScripts[js], 100);
+      }
+    }
+
+    // Method 3: regex — "name" + "uri" containing spotify:track:
+    if (tracks.length === 0) {
+      var rx3 = /"name"\s*:\s*"((?:[^"\\]|\\.)*)"[\s\S]{0,200}"uri"\s*:\s*"spotify:track:[^"]+"/g;
+      var m3;
+      while ((m3 = rx3.exec(html)) !== null) {
+        var t3 = m3[1].replace(/\\"/g, '"').replace(/\\u0026/g, '&');
+        if (t3 && t3.length < 200) tracks.push({ title: t3, artist: '' });
+      }
+    }
+
+    // Method 4: regex no HTML bruto — track + artist name
+    if (tracks.length === 0) {
+      var rx4 = /"track"\s*:\s*\{[\s\S]{0,500}"name"\s*:\s*"((?:[^"\\]|\\.)*)"[\s\S]{0,300}"name"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+      var m4;
+      while ((m4 = rx4.exec(html)) !== null) {
+        var tn = m4[1].replace(/\\"/g, '"').replace(/\\u0026/g, '&');
+        var an = m4[2].replace(/\\"/g, '"').replace(/\\u0026/g, '&');
+        if (tn && an && tn.length < 200 && an.length < 200) tracks.push({ title: tn, artist: an });
       }
     }
 
@@ -242,7 +293,7 @@ http.createServer((req, res) => {
     var unique = [];
     for (var i = 0; i < tracks.length; i++) {
       var key = (tracks[i].title + '|' + tracks[i].artist).toLowerCase().trim();
-      if (!seen[key]) { seen[key] = true; unique.push(tracks[i]); }
+      if (!seen[key] && tracks[i].title) { seen[key] = true; unique.push(tracks[i]); }
     }
 
     if (unique.length === 0) return { status: 'error', message: 'Nao foi possivel extrair as musicas. A playlist pode ser privada ou o formato do Spotify mudou.' };

@@ -624,7 +624,6 @@ const MusicTab = (() => {
         App.refreshCurrentTab();
       } else {
         var msg = json.message || 'Nao foi possivel extrair as musicas dessa playlist.';
-        if (msg.indexOf('Erro') === -1 && msg.indexOf('nao') === -1) msg = 'Nenhuma musica encontrada. A playlist pode ser privada.';
         App.showToast(msg, 'error');
       }
     }).catch(function(err) {
