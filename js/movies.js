@@ -10,6 +10,13 @@ const MoviesTab = (() => {
   let currentClip = null;
   let justHeardMode = false;
 
+  let movieIsPlaying = false;
+  let movieStartTime = 0;
+  let moviePausedAt = 0;
+  let moviePolling = null;
+  let moviePlayerDuration = 300;
+  let movieCurrentTime = 0;
+
   function render() {
     if (currentView === 'player' && currentClip) {
       return renderPlayer();
@@ -21,6 +28,63 @@ const MoviesTab = (() => {
       return renderAdminPanel();
     }
     return renderList();
+  }
+
+  function stopMovieSync() {
+    if (moviePolling) { clearInterval(moviePolling); moviePolling = null; }
+    movieIsPlaying = false;
+  }
+
+  function startMovieSync() {
+    stopMovieSync();
+    movieIsPlaying = true;
+    movieStartTime = Date.now();
+    if (moviePausedAt === 0) movieCurrentTime = 0;
+    syncMovieTime();
+    moviePolling = setInterval(syncMovieTime, 200);
+  }
+
+  function syncMovieTime() {
+    if (!movieIsPlaying) { movieCurrentTime = moviePausedAt; return; }
+    movieCurrentTime = moviePausedAt + (Date.now() - movieStartTime) / 1000;
+    highlightActiveSubtitle();
+  }
+
+  function highlightActiveSubtitle() {
+    var subs = currentClip ? currentClip.subtitles : [];
+    if (!subs || subs.length === 0) return;
+    var activeIdx = -1;
+    for (var i = subs.length - 1; i >= 0; i--) {
+      if (movieCurrentTime >= subs[i].timeSeconds) { activeIdx = i; break; }
+    }
+    var lines = document.querySelectorAll('.subtitle-line');
+    for (var i = 0; i < lines.length; i++) {
+      var isActive = i === activeIdx;
+      lines[i].classList.toggle('active', isActive);
+      if (isActive) lines[i].scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+
+  function movieTogglePlay() {
+    if (!currentClip) return;
+    if (movieIsPlaying) {
+      moviePausedAt += (Date.now() - movieStartTime) / 1000;
+      movieIsPlaying = false;
+      stopMovieSync();
+      var container = document.querySelector('.movie-video-container');
+      if (container) container.innerHTML = '';
+      var btn = document.getElementById('movie-play-btn');
+      if (btn) btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+    } else {
+      var embedUrl = getYoutubeEmbedUrl(currentClip.videoUrl, Math.floor(moviePausedAt));
+      var container = document.querySelector('.movie-video-container');
+      if (container && embedUrl) {
+        container.innerHTML = '<iframe src="' + embedUrl + '" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>';
+      }
+      startMovieSync();
+      var btn = document.getElementById('movie-play-btn');
+      if (btn) btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+    }
   }
 
   function renderList() {
@@ -77,8 +141,18 @@ const MoviesTab = (() => {
   }
 
   function renderPlayer() {
-    const series = Store.getMovies().find(m => m.clips.some(c => c.id === currentClip.id));
-    const embedUrl = getYoutubeEmbedUrl(currentClip.videoUrl);
+    if (currentClip.hasSubtitles && currentClip.subtitles.length > 0) {
+      moviePlayerDuration = currentClip.subtitles[currentClip.subtitles.length - 1].timeSeconds + 5; // Add 5 seconds for buffer
+    } else {
+      moviePlayerDuration = 300; // Default to 5 minutes if no subs
+    }
+
+    const embedUrl = getYoutubeEmbedUrl(currentClip.videoUrl, Math.floor(movieCurrentTime));
+    const playIcon = movieIsPlaying
+      ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'
+      : '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+    
+    const durationFormatted = formatTime(moviePlayerDuration);
 
     return `
       <div class="movie-player-view active">
@@ -90,19 +164,29 @@ const MoviesTab = (() => {
         </div>
 
         <div class="movie-video-container">
-          ${embedUrl ? `<iframe src="${embedUrl}" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>` : `<div class="flex-center h-full" style="color: var(--text-muted);">Vídeo não disponível</div>`}
+          ${embedUrl ? `<iframe id="movie-youtube-player" src="${embedUrl}" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>` : `<div class="flex-center h-full" style="color: var(--text-muted);">Vídeo não disponível</div>`}
         </div>
 
         ${currentClip.hasSubtitles && currentClip.subtitles.length > 0 ? `
-          <div class="subtitle-controls">
-            <button class="chip chip-sm" id="prev-verse-btn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-              Verso anterior
-            </button>
-            <button class="chip chip-sm ${justHeardMode ? 'active' : ''}" id="just-heard-btn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              Just Heard
-            </button>
+          <div class="player-controls-bottom">
+            <div class="player-controls flex-center" style="gap:var(--space-lg);padding:var(--space-sm)">
+              <button id="movie-skip-back" class="btn-icon" style="color:var(--text-secondary);background:none;border:none;cursor:pointer;font-size:20px">⏪</button>
+              <button id="movie-play-btn" class="player-play-btn" style="width:48px;height:48px;border-radius:50%;background:var(--accent);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer">${playIcon}</button>
+              <button id="movie-skip-fwd" class="btn-icon" style="color:var(--text-secondary);background:none;border:none;cursor:pointer;font-size:20px">⏩</button>
+            </div>
+
+            <div class="player-progress flex-center mb-sm" style="gap:var(--space-sm);padding:0 var(--space-lg)">
+              <span class="player-time" id="movie-time-current">${formatTime(movieCurrentTime)}</span>
+              <input type="range" class="player-seekbar" id="movie-seekbar" min="0" max="100" value="${moviePlayerDuration > 0 ? (movieCurrentTime / moviePlayerDuration) * 100 : 0}" style="flex:1">
+              <span class="player-time" id="movie-time-total">${durationFormatted}</span>
+            </div>
+
+            <div class="subtitle-controls">
+              <button class="chip chip-sm ${justHeardMode ? 'active' : ''}" id="just-heard-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Just Heard
+              </button>
+            </div>
           </div>
 
           <div class="subtitle-area no-scrollbar" id="subtitle-area">
@@ -271,15 +355,24 @@ const MoviesTab = (() => {
     return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : null;
   }
 
-  function getYoutubeEmbedUrl(url) {
+  function getYoutubeEmbedUrl(url, startSeconds) {
     const id = getYoutubeId(url);
-    return id ? `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1` : null;
+    if (!id) return null;
+    var params = 'rel=0&modestbranding=1&autoplay=1&enablejsapi=1';
+    if (startSeconds > 0) params += '&start=' + Math.floor(startSeconds);
+    return 'https://www.youtube.com/embed/' + id + '?' + params;
   }
 
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  function formatTime(s) {
+    var m = Math.floor(s / 60);
+    var sec = Math.floor(s % 60);
+    return m + ':' + (sec < 10 ? '0' : '') + sec;
   }
 
   // ---- Events ----
@@ -297,11 +390,11 @@ const MoviesTab = (() => {
       });
     }
 
-    // Back buttons
     container.querySelector('#movie-back-btn')?.addEventListener('click', () => {
       currentView = 'list';
       currentClip = null;
       justHeardMode = false;
+      stopMovieSync();
       App.refreshCurrentTab();
     });
 
@@ -328,10 +421,61 @@ const MoviesTab = (() => {
           if (clip) {
             currentClip = clip;
             currentView = 'player';
+            movieCurrentTime = 0;
+            moviePausedAt = 0;
+            movieIsPlaying = false;
+            startMovieSync();
             App.refreshCurrentTab();
           }
         }
       });
+    });
+
+    // Player controls (play/pause, skip, seekbar)
+    container.querySelector('#movie-play-btn')?.addEventListener('click', movieTogglePlay);
+    container.querySelector('#movie-skip-back')?.addEventListener('click', () => {
+      movieCurrentTime = Math.max(0, movieCurrentTime - 10);
+      moviePausedAt = movieCurrentTime;
+      movieStartTime = Date.now();
+      // Re-embed video for seeking
+      const embedUrl = getYoutubeEmbedUrl(currentClip.videoUrl, Math.floor(movieCurrentTime));
+      const videoContainer = document.querySelector('.movie-video-container');
+      if (videoContainer && embedUrl) {
+        videoContainer.innerHTML = '<iframe id="movie-youtube-player" src="' + embedUrl + '" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>';
+      }
+      highlightActiveSubtitle();
+    });
+    container.querySelector('#movie-skip-fwd')?.addEventListener('click', () => {
+      movieCurrentTime = Math.min(moviePlayerDuration, movieCurrentTime + 10);
+      moviePausedAt = movieCurrentTime;
+      movieStartTime = Date.now();
+      // Re-embed video for seeking
+      const embedUrl = getYoutubeEmbedUrl(currentClip.videoUrl, Math.floor(movieCurrentTime));
+      const videoContainer = document.querySelector('.movie-video-container');
+      if (videoContainer && embedUrl) {
+        videoContainer.innerHTML = '<iframe id="movie-youtube-player" src="' + embedUrl + '" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>';
+      }
+      highlightActiveSubtitle();
+    });
+    container.querySelector('#movie-seekbar')?.addEventListener('input', function() {
+      if (moviePlayerDuration > 0) {
+        var val = (this.value / 100) * moviePlayerDuration;
+        var curEl = document.getElementById('movie-time-current');
+        if (curEl) curEl.textContent = formatTime(val);
+      }
+    });
+    container.querySelector('#movie-seekbar')?.addEventListener('change', function() {
+      if (moviePlayerDuration > 0) {
+        movieCurrentTime = (this.value / 100) * moviePlayerDuration;
+        moviePausedAt = movieCurrentTime;
+        movieStartTime = Date.now();
+        const embedUrl = getYoutubeEmbedUrl(currentClip.videoUrl, Math.floor(movieCurrentTime));
+        const videoContainer = document.querySelector('.movie-video-container');
+        if (videoContainer && embedUrl) {
+          videoContainer.innerHTML = '<iframe id="movie-youtube-player" src="' + embedUrl + '" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>';
+        }
+        highlightActiveSubtitle();
+      }
     });
 
     // See all clips
