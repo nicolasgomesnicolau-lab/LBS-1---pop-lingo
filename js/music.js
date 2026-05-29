@@ -271,6 +271,21 @@ const MusicTab = (() => {
     return text.replace(/[^\w\s',!?.%-]/g, '').replace(/\s+/g, ' ').trim();
   }
 
+  function updateKaraokeUI() {
+    var container = document.getElementById('karaoke-lyrics') || document.getElementById('karaoke-status');
+    if (!container) { App.refreshCurrentTab(); return; }
+    var parent = container.parentNode;
+    if (karaokeStatus === 'loading') {
+      parent.innerHTML = '<div id="karaoke-status" class="flex-center" style="gap:var(--space-sm);padding:var(--space-lg)"><div class="spinner"></div><span>A IA esta ouvindo a musica...</span></div>';
+    } else if (karaokeStatus === 'ready') {
+      parent.innerHTML = '<div id="karaoke-lyrics" class="karaoke-lyrics">' + renderKaraokeLines() + '</div>';
+    } else {
+      parent.innerHTML = '<div id="karaoke-status" class="text-center text-muted" style="padding:var(--space-md);font-size:var(--font-sm)">' + escapeHtml(karaokeErrorMsg || 'Nenhuma legenda encontrada') + '<button class="btn btn-secondary btn-sm mt-base" id="karaoke-retry-btn" style="display:block;margin:var(--space-sm) auto 0">Tentar Novamente</button></div>';
+    }
+    var retryBtn = document.getElementById('karaoke-retry-btn');
+    if (retryBtn && currentSong) retryBtn.addEventListener('click', function () { fetchKaraoke(currentSong.videoId); });
+  }
+
   function fetchKaraoke(videoId) {
     karaokeData = [];
     currentPhraseIdx = -1;
@@ -283,14 +298,14 @@ const MusicTab = (() => {
         if (parsed && parsed.length > 0) {
           karaokeData = parsed;
           karaokeStatus = 'ready';
-          App.refreshCurrentTab();
+          updateKaraokeUI();
           return;
         }
       } catch (e) { }
     }
 
     karaokeStatus = 'loading';
-    App.refreshCurrentTab();
+    updateKaraokeUI();
     fetch('/api/karaoke', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -310,12 +325,12 @@ const MusicTab = (() => {
           karaokeStatus = 'error';
           karaokeErrorMsg = json.message || 'Nenhuma legenda encontrada';
         }
-        App.refreshCurrentTab();
+        updateKaraokeUI();
       })
       .catch(function () {
         karaokeStatus = 'error';
         karaokeErrorMsg = 'Erro de conexao com o servidor';
-        App.refreshCurrentTab();
+        updateKaraokeUI();
       });
   }
 
