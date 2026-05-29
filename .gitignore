@@ -3,4 +3,4 @@ server_err.txt
 server_out.txt
 *.log
 .env
-data/
+data/karaoke_cache/
