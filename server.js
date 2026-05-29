@@ -263,7 +263,7 @@ http.createServer((req, res) => {
     return;
   }
 
-  // YouTube search — try API key first, fallback to yt-search
+  // YouTube search using YouTube Data API
   if (method === 'GET' && url.pathname === '/api/youtube-search') {
     var q = url.searchParams.get('q');
     if (!q || !q.trim()) {
@@ -271,35 +271,23 @@ http.createServer((req, res) => {
       res.end(JSON.stringify({ error: 'Faltando query' }));
       return;
     }
-    if (YT_API_KEY) {
-      fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&q=' + encodeURIComponent(q.trim()) + '&key=' + YT_API_KEY + '&type=video&maxResults=10')
-        .then(function(r) { return r.json(); })
-        .then(function(json) {
-          if (json.error) throw new Error(json.error.message);
-          var results = (json.items || []).map(function(item) {
-            return { title: item.snippet.title, author: item.snippet.channelTitle, videoId: item.id.videoId, thumbnail: item.snippet.thumbnails.default ? item.snippet.thumbnails.default.url : '' };
-          });
+    fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&q=' + encodeURIComponent(q.trim()) + '&key=' + YT_API_KEY + '&type=video&maxResults=10')
+      .then(function(r) { return r.json(); })
+      .then(function(json) {
+        if (json.error) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify(results));
-        }).catch(function() {
-          // Fallback to yt-search
-          searchYouTube(q.trim()).then(function(videos) {
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(videos));
-          }).catch(function() {
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify([]));
-          });
+          res.end(JSON.stringify([]));
+          return;
+        }
+        var results = (json.items || []).map(function(item) {
+          return { title: item.snippet.title, author: item.snippet.channelTitle, videoId: item.id.videoId, thumbnail: item.snippet.thumbnails.default ? item.snippet.thumbnails.default.url : '' };
         });
-    } else {
-      searchYouTube(q.trim()).then(function(videos) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(videos));
+        res.end(JSON.stringify(results));
       }).catch(function() {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify([]));
       });
-    }
     return;
   }
 
