@@ -21,8 +21,14 @@ const MusicTab = (() => {
   var heardMode = false;
   var currentPhraseIdx = -1;
   var karaokeErrorMsg = '';
-  var KARAOKE_NGROK = 'https://tactile-scribble-postage.ngrok-free.dev';
   var spotifySearchAll = false;
+
+  function youtubeSearch(query) {
+    return fetch('/api/youtube-search?q=' + encodeURIComponent(query))
+      .then(function (r) { return r.json(); })
+      .then(function (items) { return items || []; })
+      .catch(function () { return []; });
+  }
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -284,9 +290,8 @@ const MusicTab = (() => {
     }
 
     karaokeStatus = 'loading';
-    var apiUrl = (KARAOKE_NGROK || '') + '/transcrever';
     App.refreshCurrentTab();
-    fetch(apiUrl, {
+    fetch('/api/karaoke', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'https://www.youtube.com/watch?v=' + videoId })
@@ -367,6 +372,15 @@ const MusicTab = (() => {
       playerDuration = 240;
       _pausedAt = 0;
       playerTime = 0;
+      // Fetch real duration from server
+      fetch('/api/video-info?videoId=' + encodeURIComponent(song.videoId))
+        .then(function(r) { return r.json(); })
+        .then(function(info) {
+          if (info.duration && info.duration > 0) {
+            playerDuration = info.duration;
+            updateSeekbar();
+          }
+        }).catch(function() {});
     }
     currentSong = song;
     _currentVideoId = song.videoId;
@@ -568,11 +582,10 @@ const MusicTab = (() => {
     searchQuery = q;
     spotifySearchAll = false;
 
-    fetch('/search?q=' + encodeURIComponent(q))
-      .then(function (r) { return r.json(); })
-      .then(function (json) {
-        if (json.status === 'success' && json.data && json.data.length > 0) {
-          searchResults = json.data.map(function (v) {
+    youtubeSearch(q)
+      .then(function (results) {
+        if (results.length > 0) {
+          searchResults = results.map(function (v) {
             return { title: v.title, artist: v.author, videoId: v.videoId };
           });
         } else {
@@ -649,13 +662,12 @@ const MusicTab = (() => {
       var s = searchResults[i];
       if (s.fromSpotify && !s.videoId) {
         (function (idx) {
-          fetch('/search?q=' + encodeURIComponent(searchResults[idx].title + ' ' + searchResults[idx].artist))
-            .then(function (r) { return r.json(); })
-            .then(function (json) {
-              if (json.status === 'success' && json.data && json.data.length > 0) {
-                searchResults[idx].videoId = json.data[0].videoId;
-                searchResults[idx].title = json.data[0].title;
-                searchResults[idx].artist = json.data[0].author;
+          youtubeSearch(searchResults[idx].title + ' ' + searchResults[idx].artist)
+            .then(function (results) {
+              if (results.length > 0) {
+                searchResults[idx].videoId = results[0].videoId;
+                searchResults[idx].title = results[0].title;
+                searchResults[idx].artist = results[0].author;
               }
               searchResults[idx].searching = false;
               completed++;
@@ -727,11 +739,10 @@ const MusicTab = (() => {
           playSong({ title: title, artist: artist, videoId: videoId });
         } else {
           App.showToast('Buscando "' + title + '"...', 'success');
-          fetch('/search?q=' + encodeURIComponent(title + ' ' + artist))
-            .then(function (r) { return r.json(); })
-            .then(function (json) {
-              if (json.status === 'success' && json.data && json.data.length > 0) {
-                var v = json.data[0];
+          youtubeSearch(title + ' ' + artist)
+            .then(function (results) {
+              if (results.length > 0) {
+                var v = results[0];
                 playSong({ title: v.title, artist: v.author, videoId: v.videoId });
               } else {
                 App.showToast('Nao encontrada no YouTube: ' + title, 'error');

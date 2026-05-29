@@ -3,12 +3,39 @@
    ======================================== */
 
 const MoviesTab = (() => {
-  const ADMIN_PASSWORD = 'w4xxy61030';
   let isAdmin = false;
   let currentView = 'list'; // list | player | allClips | admin
   let currentSeries = null;
   let currentClip = null;
   let justHeardMode = false;
+
+  // Server-backed movies cache (shared across all users)
+  let serverMovies = [];
+  let _adminToken = '';
+
+  function loadMovies() {
+    return fetch('/api/movies')
+      .then(function(r) { return r.json(); })
+      .then(function(movies) {
+        serverMovies = movies || [];
+        return serverMovies;
+      })
+      .catch(function() {
+        serverMovies = [];
+        return serverMovies;
+      });
+  }
+
+  function saveMoviesToServer() {
+    return fetch('/api/movies/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: _adminToken, movies: serverMovies })
+    }).then(function(r) { return r.json(); });
+  }
+
+  // Load movies from server on init
+  loadMovies().then(function() { if (typeof App !== 'undefined') App.refreshCurrentTab(); });
 
   // YouTube Player State
   let movieYTPlayer = null; // The YT.Player instance
@@ -53,7 +80,7 @@ const MoviesTab = (() => {
       videoId: videoId,
       playerVars: {
         'autoplay': 1,
-        'controls': 1, // User needs controls to see the video
+        'controls': 0,
         'rel': 0,
         'modestbranding': 1,
         'enablejsapi': 1,
@@ -198,7 +225,6 @@ const MoviesTab = (() => {
   }
 
   function renderList() {
-    const movies = Store.getMovies();
     return `
       <div class="tab-header">
         <div class="tab-header-icon">🎬</div>
@@ -211,7 +237,7 @@ const MoviesTab = (() => {
         </button>
       </div>
 
-      ${movies.length > 0 ? movies.map(series => renderSeriesSection(series)).join('') : `
+      ${serverMovies.length > 0 ? serverMovies.map(series => renderSeriesSection(series)).join('') : `
         <div class="empty-state">
           <div class="empty-state-icon">🎥</div>
           <h3>Nenhum clip ainda</h3>
@@ -341,7 +367,6 @@ const MoviesTab = (() => {
   }
 
   function renderAdminPanel() {
-    const movies = Store.getMovies();
     return `
       <div class="admin-panel active">
         <div class="movie-player-header">
@@ -365,7 +390,7 @@ const MoviesTab = (() => {
             <label>Série</label>
             <select class="input-field" id="admin-clip-series" style="background: var(--bg-input);">
               <option value="">Selecione...</option>
-              ${movies.map(m => `<option value="${m.id}">${escapeHtml(m.seriesName)}</option>`).join('')}
+              ${serverMovies.map(m => `<option value="${m.id}">${escapeHtml(m.seriesName)}</option>`).join('')}
             </select>
           </div>
           <div class="admin-form-group">
@@ -386,7 +411,8 @@ const MoviesTab = (() => {
             <label>Legendas (formato: 0:00 texto)</label>
             <textarea class="input-field" id="admin-clip-subs" placeholder="0:00 Here
 0:05 she is. Did you think I wouldn't know
-0:09 the second you walked through the door?"></textarea>
+0:09 the second you walked through the door?" style="min-height:100px"></textarea>
+            <button class="btn btn-secondary btn-sm mt-sm" id="admin-auto-subs" style="width:100%">⚡ Gerar Automaticamente</button>
           </div>
           <button class="btn btn-primary btn-block btn-sm" id="admin-add-clip">Adicionar Clip</button>
         </div>
@@ -400,7 +426,7 @@ const MoviesTab = (() => {
             <label>Série</label>
             <select class="input-field" id="admin-batch-series" style="background: var(--bg-input);">
               <option value="">Selecione...</option>
-              ${movies.map(m => `<option value="${m.id}">${escapeHtml(m.seriesName)}</option>`).join('')}
+              ${serverMovies.map(m => `<option value="${m.id}">${escapeHtml(m.seriesName)}</option>`).join('')}
             </select>
           </div>
           <div class="admin-form-group">
@@ -411,7 +437,7 @@ const MoviesTab = (() => {
 
         <div class="card mb-lg" style="padding: var(--space-xl);">
           <h3 style="font-size: var(--font-md); margin-bottom: var(--space-base);">🗑️ Gerenciar Séries</h3>
-          ${movies.length > 0 ? movies.map(m => `
+          ${serverMovies.length > 0 ? serverMovies.map(m => `
             <div class="flex-between mb-sm" style="padding: var(--space-sm) 0; border-bottom: 1px solid var(--border-color);">
               <span style="font-weight: 600;">${escapeHtml(m.seriesName)} (${m.clips.length} clips)</span>
               <button class="btn btn-sm btn-danger" data-delete-series="${m.id}">Deletar</button>
@@ -497,8 +523,7 @@ const MoviesTab = (() => {
       el.addEventListener('click', () => {
         const clipId = el.dataset.playClip;
         const seriesId = el.dataset.seriesId;
-        const movies = Store.getMovies();
-        const series = movies.find(m => m.id === seriesId);
+        const series = serverMovies.find(m => m.id === seriesId);
         if (series) {
           const clip = series.clips.find(c => c.id === clipId);
           if (clip) {
@@ -539,8 +564,7 @@ const MoviesTab = (() => {
     container.querySelectorAll('[data-see-all]').forEach(el => {
       el.addEventListener('click', () => {
         const seriesId = el.dataset.seeAll;
-        const movies = Store.getMovies();
-        currentSeries = movies.find(m => m.id === seriesId);
+        currentSeries = serverMovies.find(m => m.id === seriesId);
         if (currentSeries) {
           currentView = 'allClips';
           App.refreshCurrentTab();
@@ -548,12 +572,21 @@ const MoviesTab = (() => {
       });
     });
 
-    // Just Heard toggle
+    // Just Heard toggle — only re-render subtitles, not the whole tab
     container.querySelector('#just-heard-btn')?.addEventListener('click', () => {
       justHeardMode = !justHeardMode;
-      App.refreshCurrentTab();
+      var area = document.getElementById('subtitle-area');
+      if (area && currentClip) {
+        area.innerHTML = renderSubtitles(currentClip.subtitles);
+        bindSubtitleEvents(container);
+      }
     });
 
+    bindSubtitleEvents(container);
+    bindAdminEvents(container);
+  }
+
+  function bindSubtitleEvents(container) {
     // Word click for translation
     container.querySelectorAll('.word').forEach(el => {
       el.addEventListener('click', () => {
@@ -572,17 +605,54 @@ const MoviesTab = (() => {
       });
     });
 
-    bindAdminEvents(container);
+    // Click subtitle line → seek to that timestamp
+    container.querySelectorAll('.subtitle-line').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.word') || e.target.closest('.word-censored')) return;
+        const idx = parseInt(el.dataset.subIndex);
+        if (!isNaN(idx) && currentClip && currentClip.subtitles[idx]) {
+          const time = currentClip.subtitles[idx].timeSeconds;
+          if (movieYTPlayer && typeof movieYTPlayer.seekTo === 'function') {
+            movieYTPlayer.seekTo(time, true);
+            movieYTPlayer.playVideo();
+          }
+        }
+      });
+    });
   }
 
   function bindAdminEvents(container) {
     container.querySelector('#admin-create-series')?.addEventListener('click', () => {
       const name = container.querySelector('#admin-series-name')?.value.trim();
       if (!name) return App.showToast('Digite o nome da série!', 'error');
-      const result = Store.addSeries(name);
-      App.showToast(result.message, result.success ? 'success' : 'error');
-      if (result.success) App.refreshCurrentTab();
+      const exists = serverMovies.find(m => m.seriesName.toLowerCase() === name.toLowerCase());
+      if (exists) return App.showToast('Série já existe!', 'error');
+      serverMovies.push({
+        id: Store.generateId(),
+        seriesName: name,
+        clips: [],
+      });
+      saveMoviesToServer().then(function(json) {
+        App.showToast(json.success ? 'Série criada!' : 'Erro ao salvar', json.success ? 'success' : 'error');
+        if (json.success) loadMovies().then(function() { App.refreshCurrentTab(); });
+      });
     });
+
+    // Auto-fill title when URL is pasted
+    var urlInput = container.querySelector('#admin-clip-url');
+    var titleInput = container.querySelector('#admin-clip-title');
+    if (urlInput && titleInput) {
+      urlInput.addEventListener('blur', function() {
+        if (titleInput.value.trim()) return;
+        var videoId = getYoutubeId(urlInput.value.trim());
+        if (!videoId) return;
+        fetch('/api/video-info?videoId=' + encodeURIComponent(videoId))
+          .then(function(r) { return r.json(); })
+          .then(function(info) {
+            if (info.title && !titleInput.value.trim()) titleInput.value = info.title;
+          }).catch(function() {});
+      });
+    }
 
     const hasSubs = container.querySelector('#admin-clip-has-subs');
     const subsGroup = container.querySelector('#admin-subs-group');
@@ -592,6 +662,48 @@ const MoviesTab = (() => {
       });
     }
 
+    container.querySelector('#admin-auto-subs')?.addEventListener('click', () => {
+      var url = container.querySelector('#admin-clip-url')?.value.trim();
+      if (!url) return App.showToast('Cole o link do YouTube primeiro!', 'error');
+      var videoId = getYoutubeId(url);
+      if (!videoId) return App.showToast('Link do YouTube inválido!', 'error');
+      var btn = container.querySelector('#admin-auto-subs');
+      btn.disabled = true;
+      btn.textContent = '⏳ Gerando...';
+      fetch('/api/video-info?videoId=' + encodeURIComponent(videoId))
+        .then(function(r) { return r.json(); })
+        .then(function(info) {
+          if (info.error || !info.duration) throw new Error(info.error || 'sem info');
+          if (info.duration > 360) {
+            btn.disabled = false;
+            btn.textContent = '⚡ Gerar Automaticamente';
+            return App.showToast('Vídeo muito longo (mais de 6 min)! Precisa adicionar legendas manualmente.', 'error');
+          }
+          return fetch('/api/karaoke', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: 'https://www.youtube.com/watch?v=' + videoId })
+          }).then(function(r) { return r.json(); }).then(function(kJson) {
+            btn.disabled = false;
+            btn.textContent = '⚡ Gerar Automaticamente';
+            if (kJson.status === 'success' && kJson.data && kJson.data.length > 0) {
+              var lines = kJson.data.map(function(entry) {
+                return formatTime(entry.start) + ' ' + (entry.text || '').trim();
+              }).filter(function(l) { return l.length > 0; });
+              container.querySelector('#admin-clip-subs').value = lines.join('\n');
+              App.showToast(lines.length + ' linhas de legenda geradas!', 'success');
+            } else {
+              App.showToast('Não foi possível gerar legendas para este vídeo.', 'error');
+            }
+          });
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.textContent = '⚡ Gerar Automaticamente';
+          App.showToast('Erro ao processar vídeo.', 'error');
+        });
+    });
+
     container.querySelector('#admin-add-clip')?.addEventListener('click', () => {
       const seriesId = container.querySelector('#admin-clip-series')?.value;
       const title = container.querySelector('#admin-clip-title')?.value.trim();
@@ -599,9 +711,21 @@ const MoviesTab = (() => {
       const hasSubs = container.querySelector('#admin-clip-has-subs')?.checked;
       const subs = container.querySelector('#admin-clip-subs')?.value.trim();
       if (!seriesId || !title || !url) return App.showToast('Preencha série, título e URL!', 'error');
-      const result = Store.addClip(seriesId, title, url, subs, hasSubs);
-      App.showToast(result.message, result.success ? 'success' : 'error');
-      if (result.success) App.refreshCurrentTab();
+      var series = serverMovies.find(m => m.id === seriesId);
+      if (!series) return App.showToast('Série não encontrada!', 'error');
+      var subtitles = [];
+      if (subs && hasSubs) subtitles = Store.parseSubtitles(subs);
+      series.clips.push({
+        id: Store.generateId(),
+        title: title,
+        videoUrl: url,
+        subtitles: subtitles,
+        hasSubtitles: hasSubs,
+      });
+      saveMoviesToServer().then(function(json) {
+        App.showToast(json.success ? 'Clip adicionado!' : 'Erro ao salvar', json.success ? 'success' : 'error');
+        if (json.success) loadMovies().then(function() { App.refreshCurrentTab(); });
+      });
     });
 
     container.querySelector('#admin-batch-add')?.addEventListener('click', () => {
@@ -611,9 +735,23 @@ const MoviesTab = (() => {
       try {
         const clips = JSON.parse(batchText);
         if (!Array.isArray(clips)) throw new Error('not array');
-        const result = Store.addClipsBatch(seriesId, clips);
-        App.showToast(result.message, result.success ? 'success' : 'error');
-        if (result.success) App.refreshCurrentTab();
+        var series = serverMovies.find(m => m.id === seriesId);
+        if (!series) return App.showToast('Série não encontrada!', 'error');
+        clips.forEach(function(clip) {
+          var subs = [];
+          if (clip.subtitlesText && clip.hasSubtitles !== false) subs = Store.parseSubtitles(clip.subtitlesText);
+          series.clips.push({
+            id: Store.generateId(),
+            title: clip.title,
+            videoUrl: clip.videoUrl,
+            subtitles: subs,
+            hasSubtitles: clip.hasSubtitles !== false,
+          });
+        });
+        saveMoviesToServer().then(function(json) {
+          App.showToast(json.success ? clips.length + ' clips adicionados!' : 'Erro ao salvar', json.success ? 'success' : 'error');
+          if (json.success) loadMovies().then(function() { App.refreshCurrentTab(); });
+        });
       } catch {
         App.showToast('JSON inválido! Verifique o formato.', 'error');
       }
@@ -622,9 +760,12 @@ const MoviesTab = (() => {
     container.querySelectorAll('[data-delete-series]').forEach(btn => {
       btn.addEventListener('click', () => {
         if (confirm('Deletar esta série e todos os clips?')) {
-          Store.deleteSeries(btn.dataset.deleteSeries);
-          App.showToast('Série deletada!', 'success');
-          App.refreshCurrentTab();
+          var idx = serverMovies.findIndex(m => m.id === btn.dataset.deleteSeries);
+          if (idx !== -1) serverMovies.splice(idx, 1);
+          saveMoviesToServer().then(function(json) {
+            App.showToast(json.success ? 'Série deletada!' : 'Erro ao salvar', json.success ? 'success' : 'error');
+            if (json.success) loadMovies().then(function() { App.refreshCurrentTab(); });
+          });
         }
       });
     });
@@ -632,20 +773,46 @@ const MoviesTab = (() => {
 
   function showAdminPasswordPrompt() {
     const password = prompt('🔒 Digite a senha de admin:');
-    if (password === ADMIN_PASSWORD) {
-      isAdmin = true;
-      currentView = 'admin';
-      App.showToast('Modo admin ativado!', 'success');
-      App.refreshCurrentTab();
-    } else if (password !== null) {
-      App.showToast('Senha incorreta!', 'error');
-    }
+    if (password === null) return;
+    fetch('/api/admin/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: password })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(json) {
+        if (json.success) {
+          isAdmin = true;
+          _adminToken = json.token;
+          currentView = 'admin';
+          App.showToast('Modo admin ativado!', 'success');
+          App.refreshCurrentTab();
+        } else {
+          App.showToast('Senha incorreta!', 'error');
+        }
+      })
+      .catch(function() {
+        App.showToast('Erro ao verificar senha!', 'error');
+      });
   }
 
   function showWordTranslation(word, subtitleLine) {
-    const translation = getBasicTranslation(word);
     const context = subtitleLine ? subtitleLine.querySelector('.subtitle-text')?.textContent.trim() : '';
-    App.showWordBubble(word, translation, context, 'movies');
+    App.showWordBubble(word, 'Carregando...', context, 'movies');
+    Ai.translate(word, context).then(function(translation) {
+      var tEl = document.getElementById('bubble-translation');
+      if (tEl) tEl.textContent = translation;
+      var saveBtn = document.getElementById('bubble-save-btn');
+      if (saveBtn) {
+        var newBtn = saveBtn.cloneNode(true);
+        saveBtn.parentNode.replaceChild(newBtn, saveBtn);
+        newBtn.addEventListener('click', function() {
+          var result = Store.addWord(word, translation, 'movies');
+          if (result.success) { App.showToast(result.message, 'success'); App.hideWordBubble(); }
+          else { App.showToast(result.message, 'error'); }
+        });
+      }
+    }).catch(function() {});
   }
 
   function getBasicTranslation(word) {

@@ -4,10 +4,32 @@ const path = require('path');
 const ytSearch = require('yt-search');
 const DICT = require('./dict.js');
 
-const PORT = 8000;
-const dir = __dirname;
+// Load .env manually (no dotenv dependency)
+(function() {
+  try {
+    var lines = fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!line || line.startsWith('#')) continue;
+      var eq = line.indexOf('=');
+      if (eq === -1) continue;
+      var key = line.slice(0, eq).trim();
+      var val = line.slice(eq + 1).trim();
+      if (!process.env[key]) process.env[key] = val;
+    }
+  } catch (e) {}
+})();
 
-const OPENROUTER_KEY = 'REMOVED';
+const PORT = process.env.PORT || 8000;
+const dir = __dirname;
+const OPENROUTER_KEY = process.env.OPENROUTER_KEY || '';
+const YT_API_KEY = process.env.YT_API_KEY || '';
+const KARAOKE_NGROK = process.env.KARAOKE_NGROK || '';
+const KARAOKE_API_KEY = process.env.KARAOKE_API_KEY || '';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+
+// In-memory admin sessions (token → timestamp)
+const SESSIONS = new Map();
 
 async function callOpenRouter(messages, model, maxTokens, retries) {
   if (retries === undefined) retries = 3;
@@ -49,15 +71,36 @@ function readBody(req) {
 }
 
 const MIME = {
-  '.html': 'text/html',
-  '.css': 'text/css',
-  '.js': 'text/javascript',
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
   '.json': 'application/json',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
 };
+
+const MOVIES_PATH = path.join(__dirname, 'data', 'movies.json');
+
+function readMoviesFile() {
+  try {
+    return JSON.parse(fs.readFileSync(MOVIES_PATH, 'utf8'));
+  } catch {
+    return [];
+  }
+}
+
+function writeMoviesFile(movies) {
+  try {
+    var dir = path.dirname(MOVIES_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(MOVIES_PATH, JSON.stringify(movies, null, 2), 'utf8');
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 
 function searchYouTube(query) {
   return ytSearch({ query: query, hl: 'en', gl: 'US' }).then(function(result) {
@@ -145,12 +188,210 @@ http.createServer((req, res) => {
         if (json.error) { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ translation: clean })); return; }
         var msg = json.choices && json.choices[0] && json.choices[0].message;
         var t = (msg && msg.content && msg.content.trim().replace(/^[""'']|[""'']$/g, '')) || clean;
+        // If the AI just echoed the word back, retry with a more explicit prompt
+        if (t === clean) {
+          return callOpenRouter([
+            { role: 'system', content: 'You are a translator. Translate the given English word to Brazilian Portuguese. If the word has multiple meanings, choose the most common one. Reply with ONLY the translated word, nothing else.' },
+            { role: 'user', content: 'What is the Brazilian Portuguese translation of "' + clean + '"?' }
+          ], 'openrouter/free', 50).then(function(json2) {
+            var t2 = clean;
+            if (!json2.error) {
+              var msg2 = json2.choices && json2.choices[0] && json2.choices[0].message;
+              t2 = (msg2 && msg2.content && msg2.content.trim().replace(/^[""'']|[""'']$/g, '')) || clean;
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ translation: t2 }));
+          });
+        }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ translation: t }));
       });
     }).catch(function() {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ translation: '' }));
+    });
+    return;
+  }
+
+  // Proxy for Jarvis karaoke transcription API
+  if (method === 'POST' && url.pathname === '/api/karaoke') {
+    readBody(req).then(function(body) {
+      var data = JSON.parse(body);
+      var videoUrl = data.url;
+      if (!videoUrl) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'URL faltando' }));
+        return;
+      }
+      var videoId = '';
+      var m = videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+      if (m) videoId = m[1];
+
+      // Server-side cache: check if already transcribed
+      if (videoId) {
+        var cachePath = path.join(__dirname, 'data', 'karaoke_cache', videoId + '.json');
+        try {
+          var cached = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+          if (cached && cached.data && cached.data.length > 0) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(cached));
+            return;
+          }
+        } catch (e) {}
+      }
+
+      fetch((KARAOKE_NGROK || '') + '/transcrever', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': KARAOKE_API_KEY },
+        body: JSON.stringify({ url: videoUrl })
+      }).then(function(r) { return r.json(); }).then(function(json) {
+        // Save to cache on success
+        if (json.status === 'success' && json.data && json.data.length > 0 && videoId) {
+          try {
+            var cacheDir = path.join(__dirname, 'data', 'karaoke_cache');
+            if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir, { recursive: true });
+            fs.writeFileSync(path.join(cacheDir, videoId + '.json'), JSON.stringify(json), 'utf8');
+          } catch (e) {}
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(json));
+      }).catch(function() {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ status: 'error', message: 'Erro de conexao com o servidor de karaoke' }));
+      });
+    });
+    return;
+  }
+
+  // YouTube search using yt-search (no API key needed, no quota limits)
+  if (method === 'GET' && url.pathname === '/api/youtube-search') {
+    var q = url.searchParams.get('q');
+    if (!q || !q.trim()) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Faltando query' }));
+      return;
+    }
+    searchYouTube(q.trim()).then(function(videos) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(videos));
+    }).catch(function() {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify([]));
+    });
+    return;
+  }
+
+  // Get video info (title + duration) via YouTube Data API
+  if (method === 'GET' && url.pathname === '/api/video-info') {
+    var videoId = url.searchParams.get('videoId');
+    if (!videoId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Faltando videoId' }));
+      return;
+    }
+    fetch('https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=' + encodeURIComponent(videoId) + '&key=' + YT_API_KEY)
+      .then(function(r) { return r.json(); })
+      .then(function(json) {
+        if (json.items && json.items[0]) {
+          var item = json.items[0];
+          var title = item.snippet ? item.snippet.title : '';
+          var durationStr = item.contentDetails ? item.contentDetails.duration : '';
+          var totalSeconds = 0;
+          if (durationStr) {
+            var match = durationStr.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+            var hours = parseInt((match[1] || '').replace('H', '')) || 0;
+            var minutes = parseInt((match[2] || '').replace('M', '')) || 0;
+            var seconds = parseInt((match[3] || '').replace('S', '')) || 0;
+            totalSeconds = hours * 3600 + minutes * 60 + seconds;
+          }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ title: title, duration: totalSeconds }));
+        } else {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Video nao encontrado' }));
+        }
+      }).catch(function() {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Erro ao buscar info' }));
+      });
+    return;
+  }
+
+  // Get video duration via YouTube Data API
+  if (method === 'GET' && url.pathname === '/api/video-duration') {
+    var videoId = url.searchParams.get('videoId');
+    if (!videoId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Faltando videoId' }));
+      return;
+    }
+    fetch('https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=' + encodeURIComponent(videoId) + '&key=' + YT_API_KEY)
+      .then(function(r) { return r.json(); })
+      .then(function(json) {
+        if (json.items && json.items[0] && json.items[0].contentDetails) {
+          var durationStr = json.items[0].contentDetails.duration; // ISO 8601: PT2M30S
+          var match = durationStr.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+          var hours = parseInt((match[1] || '').replace('H', '')) || 0;
+          var minutes = parseInt((match[2] || '').replace('M', '')) || 0;
+          var seconds = parseInt((match[3] || '').replace('S', '')) || 0;
+          var totalSeconds = hours * 3600 + minutes * 60 + seconds;
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ duration: totalSeconds }));
+        } else {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Video nao encontrado' }));
+        }
+      }).catch(function() {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Erro ao buscar duracao' }));
+      });
+    return;
+  }
+
+  // Admin password verification — returns session token
+  if (method === 'POST' && url.pathname === '/api/admin/verify') {
+    readBody(req).then(function(body) {
+      var data = JSON.parse(body);
+      var password = data.password || '';
+      if (password === ADMIN_PASSWORD) {
+        var token = '';
+        var chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        for (var i = 0; i < 32; i++) token += chars.charAt(Math.floor(Math.random() * chars.length));
+        SESSIONS.set(token, Date.now());
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, token: token }));
+      } else {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false }));
+      }
+    });
+    return;
+  }
+
+  // Movies API — shared server-side storage
+  if (method === 'GET' && url.pathname === '/api/movies') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(readMoviesFile()));
+    return;
+  }
+
+  if (method === 'POST' && url.pathname === '/api/movies/save') {
+    readBody(req).then(function(body) {
+      var data = JSON.parse(body);
+      if (!data.token || !SESSIONS.has(data.token)) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'Sessão inválida' }));
+        return;
+      }
+      // Renew session
+      SESSIONS.set(data.token, Date.now());
+      if (writeMoviesFile(data.movies)) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Salvo!' }));
+      } else {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'Erro ao salvar' }));
+      }
     });
     return;
   }
@@ -362,6 +603,8 @@ http.createServer((req, res) => {
   });
 }).listen(PORT, () => {
   console.log('Servidor rodando em http://localhost:' + PORT);
-  const { exec } = require('child_process');
-  exec('start http://localhost:' + PORT);
+  if (process.platform === 'win32') {
+    const { exec } = require('child_process');
+    exec('start http://localhost:' + PORT);
+  }
 });
