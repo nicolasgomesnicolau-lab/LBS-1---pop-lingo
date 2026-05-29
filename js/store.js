@@ -31,7 +31,7 @@ const Store = (() => {
   }
 
   function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 6);
+    return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
   }
 
   // ---- Words ----
@@ -163,8 +163,8 @@ const Store = (() => {
     }
   }
 
+  // Format: "00:00 text" or "0:00 text" per line
   function parseSubtitles(text) {
-    // Format: "00:00 text" or "0:00 text" per line
     const lines = text.trim().split('\n');
     return lines
       .map(line => {
@@ -193,7 +193,6 @@ const Store = (() => {
 
   function addMusicHistory(song) {
     const history = getMusicHistory();
-    // Remove if already exists (to move to front)
     const filtered = history.filter(
       h => !(h.title === song.title && h.artist === song.artist)
     );
@@ -206,7 +205,6 @@ const Store = (() => {
       totalParts: song.totalParts || 3,
       addedAt: new Date().toISOString(),
     });
-    // Keep last 20
     set(KEYS.MUSIC_HISTORY, filtered.slice(0, 20));
   }
 
@@ -256,52 +254,27 @@ const Store = (() => {
     };
   }
 
-  function getStatsForPeriod(days) {
-    const stats = getStudyStats();
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    const cutoffStr = cutoff.toISOString().split('T')[0];
-
-    return stats.history.filter(h => h.date >= cutoffStr);
-  }
-
-  function getAggregatedStats(days) {
-    const periodStats = getStatsForPeriod(days);
-    const totalCorrect = periodStats.reduce((s, h) => s + h.correct, 0);
-    const totalWrong = periodStats.reduce((s, h) => s + h.wrong, 0);
-    const totalWords = periodStats.reduce((s, h) => s + h.wordsStudied, 0);
-    const daysStudied = periodStats.length;
-    const goalMet = periodStats.filter(h => h.wordsStudied >= getStudyStats().dailyGoal).length;
-
-    return {
-      freq: daysStudied,
-      words: totalWords,
-      correct: totalCorrect,
-      goalMet,
-    };
-  }
-
   // ---- Playlist ----
   function getPlaylist() {
     return get(KEYS.PLAYLIST) || [];
   }
 
   function addToPlaylist(song) {
-    var list = getPlaylist();
-    var exists = list.some(function(s) { return s.title === song.title && s.artist === song.artist; });
-    if (exists) return { success: false, message: 'Musica ja esta na playlist!' };
+    const list = getPlaylist();
+    const exists = list.some(s => s.title === song.title && s.artist === song.artist);
+    if (exists) return { success: false, message: 'Música já está na playlist!' };
     list.push({ title: song.title, artist: song.artist, videoId: song.videoId });
     set(KEYS.PLAYLIST, list);
     return { success: true, message: 'Adicionada a playlist!' };
   }
 
   function removeFromPlaylist(title, artist) {
-    var list = getPlaylist().filter(function(s) { return !(s.title === title && s.artist === artist); });
+    const list = getPlaylist().filter(s => !(s.title === title && s.artist === artist));
     set(KEYS.PLAYLIST, list);
   }
 
   function isInPlaylist(title, artist) {
-    return getPlaylist().some(function(s) { return s.title === title && s.artist === artist; });
+    return getPlaylist().some(s => s.title === title && s.artist === artist);
   }
 
   // ---- Settings ----
@@ -317,9 +290,27 @@ const Store = (() => {
     set(KEYS.SETTINGS, settings);
   }
 
+  function getAggregatedStats(periodDays) {
+    const stats = getStudyStats();
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - (periodDays || 7));
+    const recent = stats.history.filter(h => new Date(h.date) >= cutoff);
+    const totalCorrect = recent.reduce((sum, h) => sum + (h.correct || 0), 0);
+    const totalWrong = recent.reduce((sum, h) => sum + (h.wrong || 0), 0);
+    const totalWords = recent.reduce((sum, h) => sum + (h.wordsStudied || 0), 0);
+    const daysStudied = recent.length;
+    const goalsMet = recent.filter(h => (h.correct || 0) >= (stats.dailyGoal || 10)).length;
+    return {
+      freq: daysStudied,
+      words: totalWords,
+      correct: totalCorrect,
+      wrong: totalWrong,
+      goalMet: goalsMet,
+    };
+  }
+
   // ---- Public API ----
   return {
-    // Words
     getWords,
     addWord,
     deleteWord,
@@ -327,7 +318,6 @@ const Store = (() => {
     getWordsBySource,
     searchWords,
 
-    // Movies
     getMovies,
     addSeries,
     deleteSeries,
@@ -336,30 +326,22 @@ const Store = (() => {
     deleteClip,
     parseSubtitles,
 
-    // Music
     getMusicHistory,
     addMusicHistory,
     updateMusicProgress,
 
-    // Study
     getStudyStats,
     recordStudyResult,
     getTodayStats,
-    getStatsForPeriod,
-    getAggregatedStats,
-    updateWordStats,
 
-    // Playlist
     getPlaylist,
     addToPlaylist,
     removeFromPlaylist,
     isInPlaylist,
 
-    // Settings
     getSettings,
     updateSettings,
-
-    // Utils
+    getAggregatedStats,
     generateId,
   };
 })();

@@ -1,4 +1,4 @@
-﻿/* ========================================
+/* ========================================
    LBS #1 — Music Tab
    Karaoke + Player simples
    ======================================== */
@@ -48,187 +48,187 @@ const MusicTab = (() => {
   }
 
   var SONGS = [
-    {title:"Shape of You",artist:"Ed Sheeran",videoId:"JGwWNGJdvx8"},
-    {title:"Perfect",artist:"Ed Sheeran",videoId:"2Vv-BfVoq4g"},
-    {title:"Thinking Out Loud",artist:"Ed Sheeran",videoId:"lp-EO5I60KA"},
-    {title:"Someone Like You",artist:"Adele",videoId:"hLQl3WQQoQ0"},
-    {title:"Rolling in the Deep",artist:"Adele",videoId:"rYEDA3JcQqw"},
-    {title:"Hello",artist:"Adele",videoId:"YQHsXMglC9A"},
-    {title:"Easy on Me",artist:"Adele",videoId:"U3ASj1L6_sY"},
-    {title:"Bohemian Rhapsody",artist:"Queen",videoId:"fJ9rUzIMcZQ"},
-    {title:"We Will Rock You",artist:"Queen",videoId:"-tJYN-eG1zk"},
-    {title:"Don't Stop Me Now",artist:"Queen",videoId:"HgzGwKwLmgM"},
-    {title:"Yesterday",artist:"The Beatles",videoId:"NrgmdOz227I"},
-    {title:"Let It Be",artist:"The Beatles",videoId:"QDYfEBY9NM4"},
-    {title:"Hey Jude",artist:"The Beatles",videoId:"A_MjCqQoLLA"},
-    {title:"Imagine",artist:"John Lennon",videoId:"YkgkThdzX-8"},
-    {title:"Hotel California",artist:"Eagles",videoId:"EqPtz5qN7HM"},
-    {title:"Wonderwall",artist:"Oasis",videoId:"6hzrDeceEKc"},
-    {title:"Smells Like Teen Spirit",artist:"Nirvana",videoId:"hTWKbfoikeg"},
-    {title:"Billie Jean",artist:"Michael Jackson",videoId:"Zi_XLOBDo_Y"},
-    {title:"Thriller",artist:"Michael Jackson",videoId:"sOnqjkJTMaA"},
-    {title:"Sweet Child O' Mine",artist:"Guns N' Roses",videoId:"1w7OgIMMRc4"},
-    {title:"Lose Yourself",artist:"Eminem",videoId:"_Yhyp-_hX2s"},
-    {title:"Umbrella",artist:"Rihanna",videoId:"CvBfHwUxHIk"},
-    {title:"Counting Stars",artist:"OneRepublic",videoId:"hT_nvWreIhg"},
-    {title:"Shake It Off",artist:"Taylor Swift",videoId:"nfWlot6h_JM"},
-    {title:"Blank Space",artist:"Taylor Swift",videoId:"e-ORhEE9VVg"},
-    {title:"Love Story",artist:"Taylor Swift",videoId:"8xg3vE8Ie_E"},
-    {title:"All of Me",artist:"John Legend",videoId:"450p7goxZqg"},
-    {title:"Happy",artist:"Pharrell Williams",videoId:"ZbZSe6N_BXs"},
-    {title:"Viva La Vida",artist:"Coldplay",videoId:"dvgZkm1xWPE"},
-    {title:"Yellow",artist:"Coldplay",videoId:"yKNxeF4KMsY"},
-    {title:"The Scientist",artist:"Coldplay",videoId:"RB-RcX5DS5A"},
-    {title:"Fix You",artist:"Coldplay",videoId:"k4V3Mo61fJM"},
-    {title:"Clocks",artist:"Coldplay",videoId:"d020hcWA_Wg"},
-    {title:"Paradise",artist:"Coldplay",videoId:"1G4isv_Fylg"},
-    {title:"Every Breath You Take",artist:"The Police",videoId:"nA2Se_VY18c"},
-    {title:"With or Without You",artist:"U2",videoId:"ujNeHIo7oTE"},
-    {title:"Nothing Else Matters",artist:"Metallica",videoId:"tAGnKpE4NJA"},
-    {title:"Enter Sandman",artist:"Metallica",videoId:"CD-E-LDc384"},
-    {title:"Paint It Black",artist:"The Rolling Stones",videoId:"O4irXQhgMqg"},
-    {title:"Don't Stop Believin'",artist:"Journey",videoId:"1k8craCGpgs"},
-    {title:"Eye of the Tiger",artist:"Survivor",videoId:"btPJPFnesV4"},
-    {title:"I Will Always Love You",artist:"Whitney Houston",videoId:"3JWTaaS7LdU"},
-    {title:"Blinding Lights",artist:"The Weeknd",videoId:"4NRXx6U8ABQ"},
-    {title:"Save Your Tears",artist:"The Weeknd",videoId:"XXYlFuWEuKI"},
-    {title:"Levitating",artist:"Dua Lipa",videoId:"TUVcZfQe-Kw"},
-    {title:"Don't Start Now",artist:"Dua Lipa",videoId:"oygrmJFKYZY"},
-    {title:"Watermelon Sugar",artist:"Harry Styles",videoId:"E07s5ZYygMg"},
-    {title:"As It Was",artist:"Harry Styles",videoId:"H5v3kku4y6Q"},
-    {title:"Bad Guy",artist:"Billie Eilish",videoId:"DyDfgMOUjCI"},
-    {title:"Drivers License",artist:"Olivia Rodrigo",videoId:"ZmDBbnmKpqQ"},
-    {title:"Stay",artist:"Justin Bieber & The Kid LAROI",videoId:"kTJczUoc26U"},
-    {title:"Shallow",artist:"Lady Gaga & Bradley Cooper",videoId:"bo_efYhYU2A"},
-    {title:"Bad Romance",artist:"Lady Gaga",videoId:"qrO4YZeyl0I"},
-    {title:"Halo",artist:"Beyonce",videoId:"bnVUHWCynig"},
-    {title:"Uptown Funk",artist:"Mark Ronson ft. Bruno Mars",videoId:"OPf0YbXqDm0"},
-    {title:"Just the Way You Are",artist:"Bruno Mars",videoId:"LjhCEhWiKXk"},
-    {title:"Roar",artist:"Katy Perry",videoId:"CevxZvSJLk8"},
-    {title:"Firework",artist:"Katy Perry",videoId:"QGJuMBdaqIw"},
-    {title:"Flowers",artist:"Miley Cyrus",videoId:"G7KNmW9a75Y"},
-    {title:"Wrecking Ball",artist:"Miley Cyrus",videoId:"My2FRPA3Gf8"},
-    {title:"Radioactive",artist:"Imagine Dragons",videoId:"ktvTqknDobU"},
-    {title:"Believer",artist:"Imagine Dragons",videoId:"7wtfhZwyrcc"},
-    {title:"Thunder",artist:"Imagine Dragons",videoId:"fKopy74weus"},
-    {title:"Demons",artist:"Imagine Dragons",videoId:"mWRsgZuwf_8"},
-    {title:"Something Just Like This",artist:"The Chainsmokers & Coldplay",videoId:"FM7mfYFhN5E"},
-    {title:"Closer",artist:"The Chainsmokers ft. Halsey",videoId:"PT2_F-1esPk"},
-    {title:"Sugar",artist:"Maroon 5",videoId:"09R8_2nJtjg"},
-    {title:"Memories",artist:"Maroon 5",videoId:"SlPhMPnCR58"},
-    {title:"See You Again",artist:"Wiz Khalifa ft. Charlie Puth",videoId:"RgKAFK5djSk"},
-    {title:"Can't Stop the Feeling",artist:"Justin Timberlake",videoId:"ru0K8uYEZWw"},
-    {title:"Mirrors",artist:"Justin Timberlake",videoId:"uuZE_IRwLNI"},
-    {title:"Love Yourself",artist:"Justin Bieber",videoId:"oyEuk8j8imI"},
-    {title:"Sorry",artist:"Justin Bieber",videoId:"fRh_vgS2dFE"},
-    {title:"Stressed Out",artist:"Twenty One Pilots",videoId:"pXRviuL6vMY"},
-    {title:"Heathens",artist:"Twenty One Pilots",videoId:"UprcpdwuwCg"},
-    {title:"Dancing Queen",artist:"ABBA",videoId:"xFrGuyw1V8s"},
-    {title:"Like a Virgin",artist:"Madonna",videoId:"s__rX_WL100"},
-    {title:"Born in the USA",artist:"Bruce Springsteen",videoId:"4z-Cb6kR_iY"},
-    {title:"We Don't Talk Anymore",artist:"Charlie Puth ft. Selena Gomez",videoId:"3AtDnEC4zak"},
-    {title:"Treat You Better",artist:"Shawn Mendes",videoId:"lY2JH1ACtRg"},
-    {title:"Stitches",artist:"Shawn Mendes",videoId:"Vbfpdl0U6W0"},
-    {title:"Call Me Maybe",artist:"Carly Rae Jepsen",videoId:"fWNaR-rxAic"},
-    {title:"Take On Me",artist:"a-ha",videoId:"djV11Xbc914"},
-    {title:"Africa",artist:"Toto",videoId:"FTQbiNvZqaY"},
-    {title:"Careless Whisper",artist:"George Michael",videoId:"izGwDsrQ1eQ"},
-    {title:"Dance Monkey",artist:"Tones and I",videoId:"q0hyYWKXF0Q"},
-    {title:"Heat Waves",artist:"Glass Animals",videoId:"mRD0-GxqHVo"},
-    {title:"I Want It That Way",artist:"Backstreet Boys",videoId:"4fndeDfaWCg"},
-    {title:"Wannabe",artist:"Spice Girls",videoId:"gJLIiF15wjQ"},
-    {title:"Toxic",artist:"Britney Spears",videoId:"LOZuxwVk7TU"},
-    {title:"Stand By Me",artist:"Ben E King",videoId:"hwZNL7QVJjE"},
-    {title:"What a Wonderful World",artist:"Louis Armstrong",videoId:"A3yCcXgbKrE"},
-    {title:"Purple Rain",artist:"Prince",videoId:"TvnYmWpD_T8"},
-    {title:"Livin' on a Prayer",artist:"Bon Jovi",videoId:"lDK9QqIzhwk"},
-    {title:"Sweet Dreams",artist:"Eurythmics",videoId:"qeMFqkcPYcg"},
-    {title:"Single Ladies",artist:"Beyonce",videoId:"4m1EFMoRFvY"},
-    {title:"If I Ain't Got You",artist:"Alicia Keys",videoId:"Ju8Hr50CxKc"},
-    {title:"No One",artist:"Alicia Keys",videoId:"rywUS-oh5vc"},
-    {title:"Empire State of Mind",artist:"Jay-Z ft. Alicia Keys",videoId:"vk6014HuxcE"},
-    {title:"Cheap Thrills",artist:"Sia",videoId:"nYh-n7EOtMA"},
-    {title:"Chandelier",artist:"Sia",videoId:"2vjPBrBU-TM"},
-    {title:"Despacito",artist:"Luis Fonsi",videoId:"kJQP7kiw5Fk"},
-    {title:"Havana",artist:"Camila Cabello",videoId:"HCjBFDNxEFY"},
-    {title:"Senorita",artist:"Shawn Mendes",videoId:"Pkh8UtuejGw"},
-    {title:"Let Her Go",artist:"Passenger",videoId:"RBumgq5yVrA"},
-    {title:"Riptide",artist:"Vance Joy",videoId:"uJ_1HMAGb4k"},
-    {title:"Hallelujah",artist:"Jeff Buckley",videoId:"y8AWFf7EAc4"},
-    {title:"Creep",artist:"Radiohead",videoId:"XFkzRNyygfk"},
-    {title:"Mr Brightside",artist:"The Killers",videoId:"gGdGFtwCNBE"},
-    {title:"Seven Nation Army",artist:"The White Stripes",videoId:"0J2QdDbelmY"},
-    {title:"Zombie",artist:"The Cranberries",videoId:"6Ejga4kJUts"},
-    {title:"Stairway to Heaven",artist:"Led Zeppelin",videoId:"QkF3oxziUD4"},
-    {title:"Come As You Are",artist:"Nirvana",videoId:"vabnZ9-ex7o"},
-    {title:"Get Lucky",artist:"Daft Punk",videoId:"5NV6Rdv1a3I"},
-    {title:"Lose Control",artist:"Teddy Swims",videoId:"gNi_6U5Pm_o"},
-    {title:"good 4 u",artist:"Olivia Rodrigo",videoId:"gNi_6U5Pm_o"},
-    {title:"Happier Than Ever",artist:"Billie Eilish",videoId:"5GJWxDKyk3A"},
-    {title:"Ocean Eyes",artist:"Billie Eilish",videoId:"viimfQi_pUw"},
-    {title:"Attention",artist:"Charlie Puth",videoId:"nfs8NYg7yQM"},
-    {title:"We Found Love",artist:"Rihanna",videoId:"tg00YEETFzg"},
-    {title:"Diamonds",artist:"Rihanna",videoId:"lWA2pjMjpBs"},
-    {title:"Moves Like Jagger",artist:"Maroon 5",videoId:"iEPTlhBmwRg"},
-    {title:"Payphone",artist:"Maroon 5",videoId:"KRaWnd3LJfs"},
-    {title:"What Makes You Beautiful",artist:"One Direction",videoId:"QJO3ROT-A4E"},
-    {title:"Story of My Life",artist:"One Direction",videoId:"W-TE_Ys4iwM"},
-    {title:"Drag Me Down",artist:"One Direction",videoId:"Jwgf3wmiA04"},
-    {title:"Night Changes",artist:"One Direction",videoId:"vYSFyH2XSsA"},
-    {title:"Photograph",artist:"Ed Sheeran",videoId:"nSDgHBxUbVQ"},
-    {title:"Bad Habits",artist:"Ed Sheeran",videoId:"orJSJGHjBLI"},
-    {title:"Shivers",artist:"Ed Sheeran",videoId:"Il0S8BouvSA"},
-    {title:"Castle on the Hill",artist:"Ed Sheeran",videoId:"6AhN3VkZ1pM"},
-    {title:"Anti-Hero",artist:"Taylor Swift",videoId:"b1kbLwvqugk"},
-    {title:"Cruel Summer",artist:"Taylor Swift",videoId:"ic8j13piAhQ"},
-    {title:"All Too Well",artist:"Taylor Swift",videoId:"sRxrwjOtIag"},
-    {title:"You Belong With Me",artist:"Taylor Swift",videoId:"VuNIsY6JdUw"},
-    {title:"I Knew You Were Trouble",artist:"Taylor Swift",videoId:"vNoKguSdy4Y"},
-    {title:"Bad Blood",artist:"Taylor Swift",videoId:"QcIy9NiNbmo"},
-    {title:"Style",artist:"Taylor Swift",videoId:"-CmadmM5cOk"},
-    {title:"Wildest Dreams",artist:"Taylor Swift",videoId:"IdneKLhsWOQ"},
-    {title:"Baby One More Time",artist:"Britney Spears",videoId:"C-u5WLJ9Yk4"},
-    {title:"Oops I Did It Again",artist:"Britney Spears",videoId:"CduA0TULnow"},
-    {title:"Toxic",artist:"Britney Spears",videoId:"LOZuxwVk7TU"},
-    {title:"Gimme More",artist:"Britney Spears",videoId:"lVhJ_A8XUgc"},
-    {title:"Womanizer",artist:"Britney Spears",videoId:"rMqayQ-U74s"},
-    {title:"Circus",artist:"Britney Spears",videoId:"lVhJ_A8XUgc"},
-    {title:"What Do You Mean?",artist:"Justin Bieber",videoId:"DK_0jXPuIr0"},
-    {title:"Baby",artist:"Justin Bieber",videoId:"kffacxfA7G4"},
-    {title:"Boyfriend",artist:"Justin Bieber",videoId:"4GuqB1BQVr4"},
-    {title:"Never Say Never",artist:"Justin Bieber",videoId:"_Z5-P9v3F8w"},
-    {title:"Beauty and a Beat",artist:"Justin Bieber",videoId:"Ys7-6_t7OEQ"},
-    {title:"Where Are U Now",artist:"Justin Bieber",videoId:"nntGTK2Fhb0"},
-    {title:"SexyBack",artist:"Justin Timberlake",videoId:"3M_5oYU-IsU"},
-    {title:"Cry Me a River",artist:"Justin Timberlake",videoId:"DksSPZTZcs0"},
-    {title:"Rock Your Body",artist:"Justin Timberlake",videoId:"5E1aJVTzR1U"},
-    {title:"Poker Face",artist:"Lady Gaga",videoId:"bESGLojNYSo"},
-    {title:"Just Dance",artist:"Lady Gaga",videoId:"2abk_n2BkFw"},
-    {title:"Paparazzi",artist:"Lady Gaga",videoId:"d2smz_1L2_0"},
-    {title:"Alejandro",artist:"Lady Gaga",videoId:"niqrrmev4mA"},
-    {title:"Applause",artist:"Lady Gaga",videoId:"pco91kroVgQ"},
-    {title:"Million Reasons",artist:"Lady Gaga",videoId:"d2smz_1L2_0"},
-    {title:"Always Remember Us This Way",artist:"Lady Gaga",videoId:"eAJgJeFypvk"},
-    {title:"Materials Girl",artist:"Madonna",videoId:"6p-IDDYn1Nk"},
-    {title:"Vogue",artist:"Madonna",videoId:"GuJQSAiODqI"},
-    {title:"Hung Up",artist:"Madonna",videoId:"EDwbyljJzI0"},
-    {title:"Like a Prayer",artist:"Madonna",videoId:"79fzeNUqQbQ"},
-    {title:"La Isla Bonita",artist:"Madonna",videoId:"zpzdgmqIHOQ"},
-    {title:"Not Like Us",artist:"Kendrick Lamar",videoId:"H58vbez_m4E"},
-    {title:"Humble",artist:"Kendrick Lamar",videoId:"tvTRZJ-4EyI"},
-    {title:"DNA",artist:"Kendrick Lamar",videoId:"NLZRYQMLDW8"},
-    {title:"God's Plan",artist:"Drake",videoId:"xpVfcZ0ZcFM"},
-    {title:"Hotline Bling",artist:"Drake",videoId:"uxpDa-c-4Mc"},
-    {title:"One Dance",artist:"Drake",videoId:"iAbnEUA0wpA"},
-    {title:"In My Feelings",artist:"Drake",videoId:"DRS_PpOrUZ4"},
-    {title:"Passionfruit",artist:"Drake",videoId:"COz9lDCFHjw"},
-    {title:"Nice for What",artist:"Drake",videoId:"U9BwYK2E5lQ"},
-    {title:"Toosie Slide",artist:"Drake",videoId:"xWggTb45brM"},
-    {title:"Laugh Now Cry Later",artist:"Drake",videoId:"JFm7YDVlqnI"},
+    { title: "Shape of You", artist: "Ed Sheeran", videoId: "JGwWNGJdvx8" },
+    { title: "Perfect", artist: "Ed Sheeran", videoId: "2Vv-BfVoq4g" },
+    { title: "Thinking Out Loud", artist: "Ed Sheeran", videoId: "lp-EO5I60KA" },
+    { title: "Someone Like You", artist: "Adele", videoId: "hLQl3WQQoQ0" },
+    { title: "Rolling in the Deep", artist: "Adele", videoId: "rYEDA3JcQqw" },
+    { title: "Hello", artist: "Adele", videoId: "YQHsXMglC9A" },
+    { title: "Easy on Me", artist: "Adele", videoId: "U3ASj1L6_sY" },
+    { title: "Bohemian Rhapsody", artist: "Queen", videoId: "fJ9rUzIMcZQ" },
+    { title: "We Will Rock You", artist: "Queen", videoId: "-tJYN-eG1zk" },
+    { title: "Don't Stop Me Now", artist: "Queen", videoId: "HgzGwKwLmgM" },
+    { title: "Yesterday", artist: "The Beatles", videoId: "NrgmdOz227I" },
+    { title: "Let It Be", artist: "The Beatles", videoId: "QDYfEBY9NM4" },
+    { title: "Hey Jude", artist: "The Beatles", videoId: "A_MjCqQoLLA" },
+    { title: "Imagine", artist: "John Lennon", videoId: "YkgkThdzX-8" },
+    { title: "Hotel California", artist: "Eagles", videoId: "EqPtz5qN7HM" },
+    { title: "Wonderwall", artist: "Oasis", videoId: "6hzrDeceEKc" },
+    { title: "Smells Like Teen Spirit", artist: "Nirvana", videoId: "hTWKbfoikeg" },
+    { title: "Billie Jean", artist: "Michael Jackson", videoId: "Zi_XLOBDo_Y" },
+    { title: "Thriller", artist: "Michael Jackson", videoId: "sOnqjkJTMaA" },
+    { title: "Sweet Child O' Mine", artist: "Guns N' Roses", videoId: "1w7OgIMMRc4" },
+    { title: "Lose Yourself", artist: "Eminem", videoId: "_Yhyp-_hX2s" },
+    { title: "Umbrella", artist: "Rihanna", videoId: "CvBfHwUxHIk" },
+    { title: "Counting Stars", artist: "OneRepublic", videoId: "hT_nvWreIhg" },
+    { title: "Shake It Off", artist: "Taylor Swift", videoId: "nfWlot6h_JM" },
+    { title: "Blank Space", artist: "Taylor Swift", videoId: "e-ORhEE9VVg" },
+    { title: "Love Story", artist: "Taylor Swift", videoId: "8xg3vE8Ie_E" },
+    { title: "All of Me", artist: "John Legend", videoId: "450p7goxZqg" },
+    { title: "Happy", artist: "Pharrell Williams", videoId: "ZbZSe6N_BXs" },
+    { title: "Viva La Vida", artist: "Coldplay", videoId: "dvgZkm1xWPE" },
+    { title: "Yellow", artist: "Coldplay", videoId: "yKNxeF4KMsY" },
+    { title: "The Scientist", artist: "Coldplay", videoId: "RB-RcX5DS5A" },
+    { title: "Fix You", artist: "Coldplay", videoId: "k4V3Mo61fJM" },
+    { title: "Clocks", artist: "Coldplay", videoId: "d020hcWA_Wg" },
+    { title: "Paradise", artist: "Coldplay", videoId: "1G4isv_Fylg" },
+    { title: "Every Breath You Take", artist: "The Police", videoId: "nA2Se_VY18c" },
+    { title: "With or Without You", artist: "U2", videoId: "ujNeHIo7oTE" },
+    { title: "Nothing Else Matters", artist: "Metallica", videoId: "tAGnKpE4NJA" },
+    { title: "Enter Sandman", artist: "Metallica", videoId: "CD-E-LDc384" },
+    { title: "Paint It Black", artist: "The Rolling Stones", videoId: "O4irXQhgMqg" },
+    { title: "Don't Stop Believin'", artist: "Journey", videoId: "1k8craCGpgs" },
+    { title: "Eye of the Tiger", artist: "Survivor", videoId: "btPJPFnesV4" },
+    { title: "I Will Always Love You", artist: "Whitney Houston", videoId: "3JWTaaS7LdU" },
+    { title: "Blinding Lights", artist: "The Weeknd", videoId: "4NRXx6U8ABQ" },
+    { title: "Save Your Tears", artist: "The Weeknd", videoId: "XXYlFuWEuKI" },
+    { title: "Levitating", artist: "Dua Lipa", videoId: "TUVcZfQe-Kw" },
+    { title: "Don't Start Now", artist: "Dua Lipa", videoId: "oygrmJFKYZY" },
+    { title: "Watermelon Sugar", artist: "Harry Styles", videoId: "E07s5ZYygMg" },
+    { title: "As It Was", artist: "Harry Styles", videoId: "H5v3kku4y6Q" },
+    { title: "Bad Guy", artist: "Billie Eilish", videoId: "DyDfgMOUjCI" },
+    { title: "Drivers License", artist: "Olivia Rodrigo", videoId: "ZmDBbnmKpqQ" },
+    { title: "Stay", artist: "Justin Bieber & The Kid LAROI", videoId: "kTJczUoc26U" },
+    { title: "Shallow", artist: "Lady Gaga & Bradley Cooper", videoId: "bo_efYhYU2A" },
+    { title: "Bad Romance", artist: "Lady Gaga", videoId: "qrO4YZeyl0I" },
+    { title: "Halo", artist: "Beyonce", videoId: "bnVUHWCynig" },
+    { title: "Uptown Funk", artist: "Mark Ronson ft. Bruno Mars", videoId: "OPf0YbXqDm0" },
+    { title: "Just the Way You Are", artist: "Bruno Mars", videoId: "LjhCEhWiKXk" },
+    { title: "Roar", artist: "Katy Perry", videoId: "CevxZvSJLk8" },
+    { title: "Firework", artist: "Katy Perry", videoId: "QGJuMBdaqIw" },
+    { title: "Flowers", artist: "Miley Cyrus", videoId: "G7KNmW9a75Y" },
+    { title: "Wrecking Ball", artist: "Miley Cyrus", videoId: "My2FRPA3Gf8" },
+    { title: "Radioactive", artist: "Imagine Dragons", videoId: "ktvTqknDobU" },
+    { title: "Believer", artist: "Imagine Dragons", videoId: "7wtfhZwyrcc" },
+    { title: "Thunder", artist: "Imagine Dragons", videoId: "fKopy74weus" },
+    { title: "Demons", artist: "Imagine Dragons", videoId: "mWRsgZuwf_8" },
+    { title: "Something Just Like This", artist: "The Chainsmokers & Coldplay", videoId: "FM7mfYFhN5E" },
+    { title: "Closer", artist: "The Chainsmokers ft. Halsey", videoId: "PT2_F-1esPk" },
+    { title: "Sugar", artist: "Maroon 5", videoId: "09R8_2nJtjg" },
+    { title: "Memories", artist: "Maroon 5", videoId: "SlPhMPnCR58" },
+    { title: "See You Again", artist: "Wiz Khalifa ft. Charlie Puth", videoId: "RgKAFK5djSk" },
+    { title: "Can't Stop the Feeling", artist: "Justin Timberlake", videoId: "ru0K8uYEZWw" },
+    { title: "Mirrors", artist: "Justin Timberlake", videoId: "uuZE_IRwLNI" },
+    { title: "Love Yourself", artist: "Justin Bieber", videoId: "oyEuk8j8imI" },
+    { title: "Sorry", artist: "Justin Bieber", videoId: "fRh_vgS2dFE" },
+    { title: "Stressed Out", artist: "Twenty One Pilots", videoId: "pXRviuL6vMY" },
+    { title: "Heathens", artist: "Twenty One Pilots", videoId: "UprcpdwuwCg" },
+    { title: "Dancing Queen", artist: "ABBA", videoId: "xFrGuyw1V8s" },
+    { title: "Like a Virgin", artist: "Madonna", videoId: "s__rX_WL100" },
+    { title: "Born in the USA", artist: "Bruce Springsteen", videoId: "4z-Cb6kR_iY" },
+    { title: "We Don't Talk Anymore", artist: "Charlie Puth ft. Selena Gomez", videoId: "3AtDnEC4zak" },
+    { title: "Treat You Better", artist: "Shawn Mendes", videoId: "lY2JH1ACtRg" },
+    { title: "Stitches", artist: "Shawn Mendes", videoId: "Vbfpdl0U6W0" },
+    { title: "Call Me Maybe", artist: "Carly Rae Jepsen", videoId: "fWNaR-rxAic" },
+    { title: "Take On Me", artist: "a-ha", videoId: "djV11Xbc914" },
+    { title: "Africa", artist: "Toto", videoId: "FTQbiNvZqaY" },
+    { title: "Careless Whisper", artist: "George Michael", videoId: "izGwDsrQ1eQ" },
+    { title: "Dance Monkey", artist: "Tones and I", videoId: "q0hyYWKXF0Q" },
+    { title: "Heat Waves", artist: "Glass Animals", videoId: "mRD0-GxqHVo" },
+    { title: "I Want It That Way", artist: "Backstreet Boys", videoId: "4fndeDfaWCg" },
+    { title: "Wannabe", artist: "Spice Girls", videoId: "gJLIiF15wjQ" },
+    { title: "Toxic", artist: "Britney Spears", videoId: "LOZuxwVk7TU" },
+    { title: "Stand By Me", artist: "Ben E King", videoId: "hwZNL7QVJjE" },
+    { title: "What a Wonderful World", artist: "Louis Armstrong", videoId: "A3yCcXgbKrE" },
+    { title: "Purple Rain", artist: "Prince", videoId: "TvnYmWpD_T8" },
+    { title: "Livin' on a Prayer", artist: "Bon Jovi", videoId: "lDK9QqIzhwk" },
+    { title: "Sweet Dreams", artist: "Eurythmics", videoId: "qeMFqkcPYcg" },
+    { title: "Single Ladies", artist: "Beyonce", videoId: "4m1EFMoRFvY" },
+    { title: "If I Ain't Got You", artist: "Alicia Keys", videoId: "Ju8Hr50CxKc" },
+    { title: "No One", artist: "Alicia Keys", videoId: "rywUS-oh5vc" },
+    { title: "Empire State of Mind", artist: "Jay-Z ft. Alicia Keys", videoId: "vk6014HuxcE" },
+    { title: "Cheap Thrills", artist: "Sia", videoId: "nYh-n7EOtMA" },
+    { title: "Chandelier", artist: "Sia", videoId: "2vjPBrBU-TM" },
+    { title: "Despacito", artist: "Luis Fonsi", videoId: "kJQP7kiw5Fk" },
+    { title: "Havana", artist: "Camila Cabello", videoId: "HCjBFDNxEFY" },
+    { title: "Senorita", artist: "Shawn Mendes", videoId: "Pkh8UtuejGw" },
+    { title: "Let Her Go", artist: "Passenger", videoId: "RBumgq5yVrA" },
+    { title: "Riptide", artist: "Vance Joy", videoId: "uJ_1HMAGb4k" },
+    { title: "Hallelujah", artist: "Jeff Buckley", videoId: "y8AWFf7EAc4" },
+    { title: "Creep", artist: "Radiohead", videoId: "XFkzRNyygfk" },
+    { title: "Mr Brightside", artist: "The Killers", videoId: "gGdGFtwCNBE" },
+    { title: "Seven Nation Army", artist: "The White Stripes", videoId: "0J2QdDbelmY" },
+    { title: "Zombie", artist: "The Cranberries", videoId: "6Ejga4kJUts" },
+    { title: "Stairway to Heaven", artist: "Led Zeppelin", videoId: "QkF3oxziUD4" },
+    { title: "Come As You Are", artist: "Nirvana", videoId: "vabnZ9-ex7o" },
+    { title: "Get Lucky", artist: "Daft Punk", videoId: "5NV6Rdv1a3I" },
+    { title: "Lose Control", artist: "Teddy Swims", videoId: "gNi_6U5Pm_o" },
+    { title: "good 4 u", artist: "Olivia Rodrigo", videoId: "gNi_6U5Pm_o" },
+    { title: "Happier Than Ever", artist: "Billie Eilish", videoId: "5GJWxDKyk3A" },
+    { title: "Ocean Eyes", artist: "Billie Eilish", videoId: "viimfQi_pUw" },
+    { title: "Attention", artist: "Charlie Puth", videoId: "nfs8NYg7yQM" },
+    { title: "We Found Love", artist: "Rihanna", videoId: "tg00YEETFzg" },
+    { title: "Diamonds", artist: "Rihanna", videoId: "lWA2pjMjpBs" },
+    { title: "Moves Like Jagger", artist: "Maroon 5", videoId: "iEPTlhBmwRg" },
+    { title: "Payphone", artist: "Maroon 5", videoId: "KRaWnd3LJfs" },
+    { title: "What Makes You Beautiful", artist: "One Direction", videoId: "QJO3ROT-A4E" },
+    { title: "Story of My Life", artist: "One Direction", videoId: "W-TE_Ys4iwM" },
+    { title: "Drag Me Down", artist: "One Direction", videoId: "Jwgf3wmiA04" },
+    { title: "Night Changes", artist: "One Direction", videoId: "vYSFyH2XSsA" },
+    { title: "Photograph", artist: "Ed Sheeran", videoId: "nSDgHBxUbVQ" },
+    { title: "Bad Habits", artist: "Ed Sheeran", videoId: "orJSJGHjBLI" },
+    { title: "Shivers", artist: "Ed Sheeran", videoId: "Il0S8BouvSA" },
+    { title: "Castle on the Hill", artist: "Ed Sheeran", videoId: "6AhN3VkZ1pM" },
+    { title: "Anti-Hero", artist: "Taylor Swift", videoId: "b1kbLwvqugk" },
+    { title: "Cruel Summer", artist: "Taylor Swift", videoId: "ic8j13piAhQ" },
+    { title: "All Too Well", artist: "Taylor Swift", videoId: "sRxrwjOtIag" },
+    { title: "You Belong With Me", artist: "Taylor Swift", videoId: "VuNIsY6JdUw" },
+    { title: "I Knew You Were Trouble", artist: "Taylor Swift", videoId: "vNoKguSdy4Y" },
+    { title: "Bad Blood", artist: "Taylor Swift", videoId: "QcIy9NiNbmo" },
+    { title: "Style", artist: "Taylor Swift", videoId: "-CmadmM5cOk" },
+    { title: "Wildest Dreams", artist: "Taylor Swift", videoId: "IdneKLhsWOQ" },
+    { title: "Baby One More Time", artist: "Britney Spears", videoId: "C-u5WLJ9Yk4" },
+    { title: "Oops I Did It Again", artist: "Britney Spears", videoId: "CduA0TULnow" },
+    { title: "Toxic", artist: "Britney Spears", videoId: "LOZuxwVk7TU" },
+    { title: "Gimme More", artist: "Britney Spears", videoId: "lVhJ_A8XUgc" },
+    { title: "Womanizer", artist: "Britney Spears", videoId: "rMqayQ-U74s" },
+    { title: "Circus", artist: "Britney Spears", videoId: "lVhJ_A8XUgc" },
+    { title: "What Do You Mean?", artist: "Justin Bieber", videoId: "DK_0jXPuIr0" },
+    { title: "Baby", artist: "Justin Bieber", videoId: "kffacxfA7G4" },
+    { title: "Boyfriend", artist: "Justin Bieber", videoId: "4GuqB1BQVr4" },
+    { title: "Never Say Never", artist: "Justin Bieber", videoId: "_Z5-P9v3F8w" },
+    { title: "Beauty and a Beat", artist: "Justin Bieber", videoId: "Ys7-6_t7OEQ" },
+    { title: "Where Are U Now", artist: "Justin Bieber", videoId: "nntGTK2Fhb0" },
+    { title: "SexyBack", artist: "Justin Timberlake", videoId: "3M_5oYU-IsU" },
+    { title: "Cry Me a River", artist: "Justin Timberlake", videoId: "DksSPZTZcs0" },
+    { title: "Rock Your Body", artist: "Justin Timberlake", videoId: "5E1aJVTzR1U" },
+    { title: "Poker Face", artist: "Lady Gaga", videoId: "bESGLojNYSo" },
+    { title: "Just Dance", artist: "Lady Gaga", videoId: "2abk_n2BkFw" },
+    { title: "Paparazzi", artist: "Lady Gaga", videoId: "d2smz_1L2_0" },
+    { title: "Alejandro", artist: "Lady Gaga", videoId: "niqrrmev4mA" },
+    { title: "Applause", artist: "Lady Gaga", videoId: "pco91kroVgQ" },
+    { title: "Million Reasons", artist: "Lady Gaga", videoId: "d2smz_1L2_0" },
+    { title: "Always Remember Us This Way", artist: "Lady Gaga", videoId: "eAJgJeFypvk" },
+    { title: "Materials Girl", artist: "Madonna", videoId: "6p-IDDYn1Nk" },
+    { title: "Vogue", artist: "Madonna", videoId: "GuJQSAiODqI" },
+    { title: "Hung Up", artist: "Madonna", videoId: "EDwbyljJzI0" },
+    { title: "Like a Prayer", artist: "Madonna", videoId: "79fzeNUqQbQ" },
+    { title: "La Isla Bonita", artist: "Madonna", videoId: "zpzdgmqIHOQ" },
+    { title: "Not Like Us", artist: "Kendrick Lamar", videoId: "H58vbez_m4E" },
+    { title: "Humble", artist: "Kendrick Lamar", videoId: "tvTRZJ-4EyI" },
+    { title: "DNA", artist: "Kendrick Lamar", videoId: "NLZRYQMLDW8" },
+    { title: "God's Plan", artist: "Drake", videoId: "xpVfcZ0ZcFM" },
+    { title: "Hotline Bling", artist: "Drake", videoId: "uxpDa-c-4Mc" },
+    { title: "One Dance", artist: "Drake", videoId: "iAbnEUA0wpA" },
+    { title: "In My Feelings", artist: "Drake", videoId: "DRS_PpOrUZ4" },
+    { title: "Passionfruit", artist: "Drake", videoId: "COz9lDCFHjw" },
+    { title: "Nice for What", artist: "Drake", videoId: "U9BwYK2E5lQ" },
+    { title: "Toosie Slide", artist: "Drake", videoId: "xWggTb45brM" },
+    { title: "Laugh Now Cry Later", artist: "Drake", videoId: "JFm7YDVlqnI" },
   ];
 
   var seen = {};
-  var SONGS_UNIQUE = SONGS.filter(function(s) {
+  var SONGS_UNIQUE = SONGS.filter(function (s) {
     var k = s.title.toLowerCase() + '|' + s.artist.toLowerCase();
     if (seen[k]) return false;
     seen[k] = true;
@@ -280,7 +280,7 @@ const MusicTab = (() => {
           App.refreshCurrentTab();
           return;
         }
-      } catch(e) {}
+      } catch (e) { }
     }
 
     karaokeStatus = 'loading';
@@ -291,27 +291,27 @@ const MusicTab = (() => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'https://www.youtube.com/watch?v=' + videoId })
     })
-    .then(function(r) { return r.json(); })
-    .then(function(json) {
-      if (json.status === 'success' && json.data && json.data.length > 0) {
-        karaokeData = json.data.map(function(entry) {
-          return { start: entry.start, end: entry.end, text: karaokeClean(entry.text) };
-        }).filter(function(entry) { return entry.text.length > 0; });
-        karaokeStatus = karaokeData.length > 0 ? 'ready' : 'error';
-        if (karaokeStatus === 'ready') {
-          localStorage.setItem('lbs_karaoke_' + videoId, JSON.stringify(karaokeData));
+      .then(function (r) { return r.json(); })
+      .then(function (json) {
+        if (json.status === 'success' && json.data && json.data.length > 0) {
+          karaokeData = json.data.map(function (entry) {
+            return { start: entry.start, end: entry.end, text: karaokeClean(entry.text) };
+          }).filter(function (entry) { return entry.text.length > 0; });
+          karaokeStatus = karaokeData.length > 0 ? 'ready' : 'error';
+          if (karaokeStatus === 'ready') {
+            localStorage.setItem('lbs_karaoke_' + videoId, JSON.stringify(karaokeData));
+          }
+        } else {
+          karaokeStatus = 'error';
+          karaokeErrorMsg = json.message || 'Nenhuma legenda encontrada';
         }
-      } else {
+        App.refreshCurrentTab();
+      })
+      .catch(function () {
         karaokeStatus = 'error';
-        karaokeErrorMsg = json.message || 'Nenhuma legenda encontrada';
-      }
-      App.refreshCurrentTab();
-    })
-    .catch(function() {
-      karaokeStatus = 'error';
-      karaokeErrorMsg = 'Erro de conexao com o servidor';
-      App.refreshCurrentTab();
-    });
+        karaokeErrorMsg = 'Erro de conexao com o servidor';
+        App.refreshCurrentTab();
+      });
   }
 
   function renderKaraokeLines() {
@@ -346,7 +346,7 @@ const MusicTab = (() => {
     if (karaokeStatus !== 'ready' || karaokeData.length === 0) return;
     var newIdx = -1;
     for (var i = 0; i < karaokeData.length; i++) {
-      if (playerTime >= karaokeData[i].start && playerTime < karaokeData[i].end) {
+      if (playerTime >= karaokeData[i].start && playerTime < karaokeData[i].end + 1) {
         newIdx = i;
         break;
       }
@@ -407,7 +407,7 @@ const MusicTab = (() => {
 
   function startPolling() {
     if (ytPolling) clearInterval(ytPolling);
-    ytPolling = setInterval(function() {
+    ytPolling = setInterval(function () {
       if (isPlaying && _currentVideoId) {
         playerTime = _pausedAt + (Date.now() - _playStartTime) / 1000;
         if (playerTime >= playerDuration) {
@@ -569,10 +569,10 @@ const MusicTab = (() => {
     spotifySearchAll = false;
 
     fetch('/search?q=' + encodeURIComponent(q))
-      .then(function(r) { return r.json(); })
-      .then(function(json) {
+      .then(function (r) { return r.json(); })
+      .then(function (json) {
         if (json.status === 'success' && json.data && json.data.length > 0) {
-          searchResults = json.data.map(function(v) {
+          searchResults = json.data.map(function (v) {
             return { title: v.title, artist: v.author, videoId: v.videoId };
           });
         } else {
@@ -580,7 +580,7 @@ const MusicTab = (() => {
         }
         App.refreshCurrentTab();
       })
-      .catch(function() {
+      .catch(function () {
         fallbackSearch(q.toLowerCase());
         App.refreshCurrentTab();
       });
@@ -614,10 +614,10 @@ const MusicTab = (() => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: url })
-    }).then(function(r) { return r.json(); }).then(function(json) {
+    }).then(function (r) { return r.json(); }).then(function (json) {
       if (btn) { btn.disabled = false; btn.textContent = '📥 Buscar musicas da playlist'; }
       if (json.status === 'success' && json.data && json.data.length > 0) {
-        searchResults = json.data.map(function(v) {
+        searchResults = json.data.map(function (v) {
           return { title: v.title, artist: v.artist, videoId: '', fromSpotify: true };
         });
         input.value = '';
@@ -627,7 +627,7 @@ const MusicTab = (() => {
         var msg = json.message || 'Nao foi possivel extrair as musicas dessa playlist.';
         App.showToast(msg, 'error');
       }
-    }).catch(function(err) {
+    }).catch(function (err) {
       if (btn) { btn.disabled = false; btn.textContent = '📥 Buscar musicas da playlist'; }
       App.showToast('Erro de conexao: ' + err.message, 'error');
     });
@@ -636,7 +636,7 @@ const MusicTab = (() => {
   function spotifySearchAllTracks() {
     spotifySearchAll = true;
     App.refreshCurrentTab();
-    var pending = searchResults.filter(function(s) { return s.fromSpotify && !s.videoId && !s.searching; });
+    var pending = searchResults.filter(function (s) { return s.fromSpotify && !s.videoId && !s.searching; });
     if (pending.length === 0) { spotifySearchAll = false; App.refreshCurrentTab(); return; }
     var completed = 0;
     for (var i = 0; i < searchResults.length; i++) {
@@ -648,10 +648,10 @@ const MusicTab = (() => {
     for (var i = 0; i < searchResults.length; i++) {
       var s = searchResults[i];
       if (s.fromSpotify && !s.videoId) {
-        (function(idx) {
+        (function (idx) {
           fetch('/search?q=' + encodeURIComponent(searchResults[idx].title + ' ' + searchResults[idx].artist))
-            .then(function(r) { return r.json(); })
-            .then(function(json) {
+            .then(function (r) { return r.json(); })
+            .then(function (json) {
               if (json.status === 'success' && json.data && json.data.length > 0) {
                 searchResults[idx].videoId = json.data[0].videoId;
                 searchResults[idx].title = json.data[0].title;
@@ -662,7 +662,7 @@ const MusicTab = (() => {
               if (completed >= pending.length) { spotifySearchAll = false; App.refreshCurrentTab(); }
               else App.refreshCurrentTab();
             })
-            .catch(function() {
+            .catch(function () {
               searchResults[idx].searching = false;
               completed++;
               if (completed >= pending.length) { spotifySearchAll = false; App.refreshCurrentTab(); }
@@ -677,8 +677,8 @@ const MusicTab = (() => {
   function bindEvents(container) {
     var searchInput = container.querySelector('#music-search-input');
     if (searchInput) {
-      searchInput.addEventListener('input', function(e) { searchQuery = e.target.value; });
-      searchInput.addEventListener('keydown', function(e) {
+      searchInput.addEventListener('input', function (e) { searchQuery = e.target.value; });
+      searchInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') doSearch();
       });
     }
@@ -691,7 +691,7 @@ const MusicTab = (() => {
 
     var urlInput = container.querySelector('#music-url-input');
     if (urlInput) {
-      urlInput.addEventListener('keydown', function(e) {
+      urlInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') loadCustomUrl();
       });
     }
@@ -701,7 +701,7 @@ const MusicTab = (() => {
 
     var spotifyInput = container.querySelector('#spotify-url-input');
     if (spotifyInput) {
-      spotifyInput.addEventListener('keydown', function(e) {
+      spotifyInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') spotifyImport();
       });
     }
@@ -710,7 +710,7 @@ const MusicTab = (() => {
     if (searchAllBtn) searchAllBtn.addEventListener('click', spotifySearchAllTracks);
 
     var clearBtn = container.querySelector('#clear-results-btn');
-    if (clearBtn) clearBtn.addEventListener('click', function() {
+    if (clearBtn) clearBtn.addEventListener('click', function () {
       searchResults = [];
       searchQuery = '';
       spotifySearchAll = false;
@@ -719,7 +719,7 @@ const MusicTab = (() => {
 
     var items = container.querySelectorAll('[data-action="play"]');
     for (var i = 0; i < items.length; i++) {
-      items[i].addEventListener('click', function() {
+      items[i].addEventListener('click', function () {
         var title = this.getAttribute('data-title');
         var artist = this.getAttribute('data-artist');
         var videoId = this.getAttribute('data-videoid');
@@ -728,8 +728,8 @@ const MusicTab = (() => {
         } else {
           App.showToast('Buscando "' + title + '"...', 'success');
           fetch('/search?q=' + encodeURIComponent(title + ' ' + artist))
-            .then(function(r) { return r.json(); })
-            .then(function(json) {
+            .then(function (r) { return r.json(); })
+            .then(function (json) {
               if (json.status === 'success' && json.data && json.data.length > 0) {
                 var v = json.data[0];
                 playSong({ title: v.title, artist: v.author, videoId: v.videoId });
@@ -737,7 +737,7 @@ const MusicTab = (() => {
                 App.showToast('Nao encontrada no YouTube: ' + title, 'error');
               }
             })
-            .catch(function() {
+            .catch(function () {
               App.showToast('Erro ao buscar musica.', 'error');
             });
         }
@@ -746,7 +746,7 @@ const MusicTab = (() => {
 
     var addBtns = container.querySelectorAll('[data-action="playlist-add"]');
     for (var i = 0; i < addBtns.length; i++) {
-      addBtns[i].addEventListener('click', function(e) {
+      addBtns[i].addEventListener('click', function (e) {
         e.stopPropagation();
         var parent = this.closest('[data-action="play"]');
         if (parent) {
@@ -758,7 +758,7 @@ const MusicTab = (() => {
 
     var removeBtns = container.querySelectorAll('[data-action="playlist-remove"]');
     for (var i = 0; i < removeBtns.length; i++) {
-      removeBtns[i].addEventListener('click', function(e) {
+      removeBtns[i].addEventListener('click', function (e) {
         e.stopPropagation();
         var parent = this.closest('[data-action="play"]');
         if (parent) {
@@ -774,7 +774,7 @@ const MusicTab = (() => {
   function bindPlayerEvents(container) {
     var backBtn = container.querySelector('#player-back-btn');
     if (backBtn) {
-      backBtn.addEventListener('click', function() {
+      backBtn.addEventListener('click', function () {
         destroyPlayer();
         view = 'list';
         currentSong = null;
@@ -787,7 +787,7 @@ const MusicTab = (() => {
 
     var playlistBtn = container.querySelector('#player-playlist-btn');
     if (playlistBtn && currentSong) {
-      playlistBtn.addEventListener('click', function() {
+      playlistBtn.addEventListener('click', function () {
         if (Store.isInPlaylist(currentSong.title, currentSong.artist)) {
           Store.removeFromPlaylist(currentSong.title, currentSong.artist);
           App.showToast('Removida da playlist', 'success');
@@ -803,28 +803,28 @@ const MusicTab = (() => {
     if (playBtn) playBtn.addEventListener('click', togglePlay);
 
     var skipBack = container.querySelector('#player-skip-back');
-    if (skipBack) skipBack.addEventListener('click', function() { seekTo(Math.max(0, playerTime - 10)); });
+    if (skipBack) skipBack.addEventListener('click', function () { seekTo(Math.max(0, playerTime - 10)); });
 
     var skipFwd = container.querySelector('#player-skip-fwd');
-    if (skipFwd) skipFwd.addEventListener('click', function() { seekTo(Math.min(playerDuration, playerTime + 10)); });
+    if (skipFwd) skipFwd.addEventListener('click', function () { seekTo(Math.min(playerDuration, playerTime + 10)); });
 
     var seekbar = container.querySelector('#player-seekbar');
     if (seekbar) {
-      seekbar.addEventListener('input', function() {
+      seekbar.addEventListener('input', function () {
         if (playerDuration > 0) {
           var val = (this.value / 100) * playerDuration;
           var curEl = document.getElementById('player-time-current');
           if (curEl) curEl.textContent = formatTime(val);
         }
       });
-      seekbar.addEventListener('change', function() {
+      seekbar.addEventListener('change', function () {
         if (playerDuration > 0) seekTo((this.value / 100) * playerDuration);
       });
     }
 
     var heardBtn = container.querySelector('#player-heard-btn');
     if (heardBtn) {
-      heardBtn.addEventListener('click', function() {
+      heardBtn.addEventListener('click', function () {
         heardMode = !heardMode;
         heardBtn.textContent = heardMode ? '🔇 Heard On' : '🔊 Heard Off';
         var ly = document.getElementById('karaoke-lyrics');
@@ -834,12 +834,12 @@ const MusicTab = (() => {
 
     var retryBtn = container.querySelector('#karaoke-retry-btn');
     if (retryBtn && currentSong) {
-      retryBtn.addEventListener('click', function() { fetchKaraoke(currentSong.videoId); });
+      retryBtn.addEventListener('click', function () { fetchKaraoke(currentSong.videoId); });
     }
 
     var lyricsEl = container.querySelector('#karaoke-lyrics');
     if (lyricsEl) {
-      lyricsEl.addEventListener('click', function(e) {
+      lyricsEl.addEventListener('click', function (e) {
         try {
           var wordEl = e.target.closest('.word');
           console.log('Click target:', e.target, 'wordEl:', wordEl);
@@ -852,7 +852,7 @@ const MusicTab = (() => {
             var context = (idx >= 0 && karaokeData[idx]) ? karaokeData[idx].text : '';
             console.log('Calling translate for:', word);
             App.showWordBubble(word, 'Carregando...', context, 'music');
-            Ai.translate(word, context).then(function(translation) {
+            Ai.translate(word, context).then(function (translation) {
               console.log('Translation resolved:', translation);
               var tEl = document.getElementById('bubble-translation');
               if (tEl) tEl.textContent = translation;
@@ -860,13 +860,13 @@ const MusicTab = (() => {
               if (saveBtn) {
                 var newBtn = saveBtn.cloneNode(true);
                 saveBtn.parentNode.replaceChild(newBtn, saveBtn);
-                newBtn.addEventListener('click', function() {
+                newBtn.addEventListener('click', function () {
                   var result = Store.addWord(word, translation, 'music');
                   if (result.success) { App.showToast(result.message, 'success'); App.hideWordBubble(); }
                   else { App.showToast(result.message, 'error'); }
                 });
               }
-            }).catch(function(err) {
+            }).catch(function (err) {
               console.log('Translate ERROR:', err);
             });
             return;
@@ -877,7 +877,7 @@ const MusicTab = (() => {
             var entry = karaokeData[idx];
             if (entry) seekTo(entry.start);
           }
-        } catch(err) {
+        } catch (err) {
           console.log('CLICK HANDLER ERROR:', err);
         }
       });
