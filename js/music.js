@@ -271,6 +271,43 @@ const MusicTab = (() => {
     return text.replace(/[^\w\s',!?.%-]/g, '').replace(/\s+/g, ' ').trim();
   }
 
+  function handleKaraokeClick(e) {
+    try {
+      var wordEl = e.target.closest('.word');
+      if (wordEl) {
+        var word = wordEl.getAttribute('data-word');
+        if (!word || word.length === 0) return;
+        var line = wordEl.closest('.karaoke-line');
+        var idx = line ? parseInt(line.getAttribute('data-idx')) : -1;
+        var context = (idx >= 0 && karaokeData[idx]) ? karaokeData[idx].text : '';
+        App.showWordBubble(word, 'Carregando...', context, 'music');
+        Ai.translate(word, context).then(function (translation) {
+          var tEl = document.getElementById('bubble-translation');
+          if (tEl) tEl.textContent = translation;
+          var saveBtn = document.getElementById('bubble-save-btn');
+          if (saveBtn) {
+            var newBtn = saveBtn.cloneNode(true);
+            saveBtn.parentNode.replaceChild(newBtn, saveBtn);
+            newBtn.addEventListener('click', function () {
+              var result = Store.addWord(word, translation, 'music');
+              if (result.success) { App.showToast(result.message, 'success'); App.hideWordBubble(); }
+              else { App.showToast(result.message, 'error'); }
+            });
+          }
+        }).catch(function () {});
+        return;
+      }
+      var line = e.target.closest('.karaoke-line');
+      if (line && line.getAttribute('data-idx') !== null) {
+        var idx = parseInt(line.getAttribute('data-idx'));
+        var entry = karaokeData[idx];
+        if (entry) seekTo(entry.start);
+      }
+    } catch (err) {
+      console.log('CLICK HANDLER ERROR:', err);
+    }
+  }
+
   function updateKaraokeUI() {
     var existing = document.getElementById('karaoke-lyrics') || document.getElementById('karaoke-status');
     if (!existing) return;
@@ -285,7 +322,11 @@ const MusicTab = (() => {
     }
     var temp = document.createElement('div');
     temp.innerHTML = newHtml;
-    parent.replaceChild(temp.firstChild, existing);
+    var newEl = temp.firstChild;
+    parent.replaceChild(newEl, existing);
+    if (karaokeStatus === 'ready') {
+      newEl.addEventListener('click', handleKaraokeClick);
+    }
     var retryBtn = document.getElementById('karaoke-retry-btn');
     if (retryBtn && currentSong) retryBtn.addEventListener('click', function () { fetchKaraoke(currentSong.videoId); });
   }
@@ -868,50 +909,7 @@ const MusicTab = (() => {
     }
 
     var lyricsEl = container.querySelector('#karaoke-lyrics');
-    if (lyricsEl) {
-      lyricsEl.addEventListener('click', function (e) {
-        try {
-          var wordEl = e.target.closest('.word');
-          console.log('Click target:', e.target, 'wordEl:', wordEl);
-          if (wordEl) {
-            var word = wordEl.getAttribute('data-word');
-            console.log('Word attr:', word);
-            if (!word || word.length === 0) { console.log('Empty word, skipping'); return; }
-            var line = wordEl.closest('.karaoke-line');
-            var idx = line ? parseInt(line.getAttribute('data-idx')) : -1;
-            var context = (idx >= 0 && karaokeData[idx]) ? karaokeData[idx].text : '';
-            console.log('Calling translate for:', word);
-            App.showWordBubble(word, 'Carregando...', context, 'music');
-            Ai.translate(word, context).then(function (translation) {
-              console.log('Translation resolved:', translation);
-              var tEl = document.getElementById('bubble-translation');
-              if (tEl) tEl.textContent = translation;
-              var saveBtn = document.getElementById('bubble-save-btn');
-              if (saveBtn) {
-                var newBtn = saveBtn.cloneNode(true);
-                saveBtn.parentNode.replaceChild(newBtn, saveBtn);
-                newBtn.addEventListener('click', function () {
-                  var result = Store.addWord(word, translation, 'music');
-                  if (result.success) { App.showToast(result.message, 'success'); App.hideWordBubble(); }
-                  else { App.showToast(result.message, 'error'); }
-                });
-              }
-            }).catch(function (err) {
-              console.log('Translate ERROR:', err);
-            });
-            return;
-          }
-          var line = e.target.closest('.karaoke-line');
-          if (line && line.getAttribute('data-idx') !== null) {
-            var idx = parseInt(line.getAttribute('data-idx'));
-            var entry = karaokeData[idx];
-            if (entry) seekTo(entry.start);
-          }
-        } catch (err) {
-          console.log('CLICK HANDLER ERROR:', err);
-        }
-      });
-    }
+    if (lyricsEl) lyricsEl.addEventListener('click', handleKaraokeClick);
   }
 
   return { render: render, bindEvents: bindEvents };
