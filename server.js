@@ -304,7 +304,47 @@ http.createServer((req, res) => {
     return;
   }
 
-  // Get video info (title + duration) via YouTube Data API
+function dataApiVideoInfo(videoId) {
+  return fetch('https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=' + encodeURIComponent(videoId) + '&key=' + YT_API_KEY)
+    .then(function(r) {
+      if (r.status === 429) throw new Error('quota_exceeded');
+      return r.json();
+    })
+    .then(function(json) {
+      if (json.error) throw new Error(json.error.message);
+      if (json.items && json.items[0]) {
+        var item = json.items[0];
+        var title = item.snippet ? item.snippet.title : '';
+        var durationStr = item.contentDetails ? item.contentDetails.duration : '';
+        var totalSeconds = 0;
+        if (durationStr) {
+          var match = durationStr.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+          var hours = parseInt((match[1] || '').replace('H', '')) || 0;
+          var minutes = parseInt((match[2] || '').replace('M', '')) || 0;
+          var seconds = parseInt((match[3] || '').replace('S', '')) || 0;
+          totalSeconds = hours * 3600 + minutes * 60 + seconds;
+        }
+        return { title: title, duration: totalSeconds };
+      }
+      return { error: 'Video nao encontrado' };
+    });
+}
+
+function ytSearchVideoInfo(videoId) {
+  return ytSearch({ query: videoId, hl: 'en', gl: 'US' }).then(function(result) {
+    var v = (result.videos || []).find(function(v) { return v.videoId === videoId; });
+    if (v) return { title: v.title, duration: v.duration ? v.duration.seconds : 0 };
+    return { title: '', duration: 0 };
+  });
+}
+
+function doYouTubeVideoInfo(videoId) {
+  return dataApiVideoInfo(videoId).catch(function(err) {
+    return ytSearchVideoInfo(videoId);
+  });
+}
+
+// Get video info (title + duration) via YouTube Data API
   if (method === 'GET' && url.pathname === '/api/video-info') {
     var videoId = url.searchParams.get('videoId');
     if (!videoId) {
@@ -312,35 +352,17 @@ http.createServer((req, res) => {
       res.end(JSON.stringify({ error: 'Faltando videoId' }));
       return;
     }
-    fetch('https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=' + encodeURIComponent(videoId) + '&key=' + YT_API_KEY)
-      .then(function(r) { return r.json(); })
-      .then(function(json) {
-        if (json.items && json.items[0]) {
-          var item = json.items[0];
-          var title = item.snippet ? item.snippet.title : '';
-          var durationStr = item.contentDetails ? item.contentDetails.duration : '';
-          var totalSeconds = 0;
-          if (durationStr) {
-            var match = durationStr.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
-            var hours = parseInt((match[1] || '').replace('H', '')) || 0;
-            var minutes = parseInt((match[2] || '').replace('M', '')) || 0;
-            var seconds = parseInt((match[3] || '').replace('S', '')) || 0;
-            totalSeconds = hours * 3600 + minutes * 60 + seconds;
-          }
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ title: title, duration: totalSeconds }));
-        } else {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Video nao encontrado' }));
-        }
-      }).catch(function() {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Erro ao buscar info' }));
-      });
+    doYouTubeVideoInfo(videoId).then(function(info) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(info));
+    }).catch(function() {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Erro ao buscar info' }));
+    });
     return;
   }
 
-  // Get video duration via YouTube Data API
+  // Get video duration via YouTube Data API (with fallback)
   if (method === 'GET' && url.pathname === '/api/video-duration') {
     var videoId = url.searchParams.get('videoId');
     if (!videoId) {
@@ -348,26 +370,18 @@ http.createServer((req, res) => {
       res.end(JSON.stringify({ error: 'Faltando videoId' }));
       return;
     }
-    fetch('https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=' + encodeURIComponent(videoId) + '&key=' + YT_API_KEY)
-      .then(function(r) { return r.json(); })
-      .then(function(json) {
-        if (json.items && json.items[0] && json.items[0].contentDetails) {
-          var durationStr = json.items[0].contentDetails.duration; // ISO 8601: PT2M30S
-          var match = durationStr.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
-          var hours = parseInt((match[1] || '').replace('H', '')) || 0;
-          var minutes = parseInt((match[2] || '').replace('M', '')) || 0;
-          var seconds = parseInt((match[3] || '').replace('S', '')) || 0;
-          var totalSeconds = hours * 3600 + minutes * 60 + seconds;
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ duration: totalSeconds }));
-        } else {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Video nao encontrado' }));
-        }
-      }).catch(function() {
+    doYouTubeVideoInfo(videoId).then(function(info) {
+      if (info.error) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Erro ao buscar duracao' }));
-      });
+        res.end(JSON.stringify({ error: info.error }));
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ duration: info.duration }));
+    }).catch(function() {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Erro ao buscar duracao' }));
+    });
     return;
   }
 
