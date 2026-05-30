@@ -20,7 +20,7 @@ const ChatTab = (() => {
       '<div class="tab-header-text"><h1>Chat IA</h1><p>Seu assistente de ingles</p></div></div>' +
       '<div class="chat-container">' + (messages.length === 0 ? renderWelcome() : renderMessages()) + '</div>' +
       '<div class="chat-input-area">' +
-      '<input type="text" class="input-field" id="chat-input" placeholder="Digite sua duvida em ingles..."' + (isLoading ? ' disabled' : '') + '>' +
+      '<input type="text" class="input-field" id="chat-input" placeholder="Digite uma palavra ou duvida..."' + (isLoading ? ' disabled' : '') + '>' +
       '<button class="chat-send-btn" id="chat-send-btn"' + (isLoading ? ' disabled' : '') + '>' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>';
   }
@@ -29,7 +29,7 @@ const ChatTab = (() => {
     return '<div class="chat-welcome">' +
       '<div class="chat-welcome-icon anim-float">🤖</div>' +
       '<h2>Ola! 👋</h2>' +
-      '<p>Pergunte sobre traducoes, gramatica, ou pratique conversacao em ingles!</p>' +
+      '<p>Digite qualquer palavra em ingles que eu traduzo e vc pode salvar na biblioteca!</p>' +
       '<div class="chat-suggestions">' +
       suggestions.map(function(s) { return '<button class="chat-suggestion" data-suggestion="' + escapeHtml(s) + '">' + s + '</button>'; }).join('') +
       '</div></div>';
@@ -39,7 +39,11 @@ const ChatTab = (() => {
     var html = '<div class="chat-messages">';
     for (var i = 0; i < messages.length; i++) {
       var msg = messages[i];
-      html += '<div class="chat-bubble ' + (msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-bot') + '">' + escapeHtml(msg.content) + '</div>';
+      if (msg.role === 'user') {
+        html += '<div class="chat-bubble chat-bubble-user">' + escapeHtml(msg.content) + '</div>';
+      } else {
+        html += '<div class="chat-bubble chat-bubble-bot">' + msg.content + '</div>';
+      }
     }
     if (isLoading) {
       html += '<div class="chat-bubble chat-bubble-bot chat-loading"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
@@ -54,15 +58,9 @@ const ChatTab = (() => {
     return d.innerHTML;
   }
 
-  function isSingleWord(str) {
-    return /^[a-zA-ZÀ-ÿ'-]+$/.test(str.trim());
-  }
-
-  function isTranslateRequest(text) {
-    return /como se diz|traduz|traduzir|o que significa|como fala|meaning of|translate|o que quer dizer|qual a traducao|como se fala|dizer em ingles/i.test(text);
-  }
-
-  function extractWord(text) {
+  function extractWordFromInput(text) {
+    var clean = text.trim().replace(/[.,!?;:]+$/g, '').trim();
+    if (/^[a-zA-ZÀ-ÿ']+$/.test(clean)) return clean.toLowerCase();
     var m = text.match(/[""'']([^""'']+)[""'']/);
     if (m) return m[1].trim();
     var prefixes = ['como se diz','traduza','traduzir','traduz','o que significa','como fala','meaning of','o que quer dizer','qual a traducao','como se fala','dizer em ingles','significado de'];
@@ -73,33 +71,22 @@ const ChatTab = (() => {
         if (after) return after;
       }
     }
-    var words = text.split(/\s+/);
+    var words = clean.split(/\s+/);
     for (var i = words.length - 1; i >= 0; i--) {
-      if (/^[a-zA-ZÀ-ÿ]{2,}$/.test(words[i])) return words[i];
+      if (/^[a-zA-ZÀ-ÿ]{2,}$/.test(words[i])) return words[i].toLowerCase();
     }
     return null;
   }
 
-  function extractTranslation(text, originalWord) {
-    var m = text.match(/[""'']([^""'']+)[""'']/g);
-    if (m) {
-      for (var i = m.length - 1; i >= 0; i--) {
-        var w = m[i].replace(/[""'']/g, '').trim();
-        if (w && w.toLowerCase() !== originalWord.toLowerCase() && w.length < 30) return w;
-      }
-    }
-    m = text.match(/(?:se diz|significa|traduz[ -]?se como|e|pode ser)\s+[""'']?([a-zA-ZÀ-ÿ\s]+?)[""'']?/i);
-    if (m) {
-      var w = m[1].replace(/[^a-zA-ZÀ-ÿ\s]/g, '').trim();
-      if (w && w.toLowerCase() !== originalWord.toLowerCase()) return w;
-    }
-    return null;
-  }
-
-  function saveTranslate(original, translation, source) {
-    if (!original || !translation || original.toLowerCase() === translation.toLowerCase()) return;
-    var r = Store.addWord(original, translation, source);
-    if (r.success) App.showToast(original + ' → ' + translation + ' salva!', 'success');
+  function renderTranslateResult(word, translation) {
+    var w = escapeHtml(word);
+    var t = escapeHtml(translation);
+    return '<div style="padding:4px 0">' +
+      '<div style="font-size:var(--font-lg);font-weight:700;margin-bottom:4px">' + w + '</div>' +
+      '<div style="font-size:var(--font-md);color:var(--accent);margin-bottom:12px">' + t + '</div>' +
+      '<button class="btn btn-sm btn-primary chat-save-btn" data-save-word="' + w + '" data-save-translation="' + t + '" style="width:100%">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>' +
+      ' Salvar na biblioteca</button></div>';
   }
 
   function sendMessage(text) {
@@ -110,38 +97,44 @@ const ChatTab = (() => {
     App.refreshCurrentTab();
     scrollToBottom();
 
-    var promise;
-    if (isSingleWord(clean)) {
-      promise = Ai.translate(clean, '').then(function(t) {
-        saveTranslate(clean, t, 'chat');
-        return { text: clean + ' = ' + t };
+    var word = extractWordFromInput(clean);
+    if (word) {
+      Ai.translate(word, '').then(function(translation) {
+        isLoading = false;
+        var isSame = word.toLowerCase() === translation.toLowerCase();
+        var displayText = isSame
+          ? '<em style="color:var(--text-muted)">Nao consegui traduzir "' + escapeHtml(word) + '". Tente uma frase completa.</em>'
+          : renderTranslateResult(word, translation);
+        messages.push({ role: 'assistant', content: displayText });
+        App.refreshCurrentTab();
+        scrollToBottom();
       });
     } else {
-      promise = Ai.chat(messages).then(function(result) {
-        if (!result.error && isTranslateRequest(clean)) {
-          var word = extractWord(clean);
-          var translation = extractTranslation(result.text, word || '');
-          if (word && translation) saveTranslate(word, translation, 'chat');
+      Ai.chat(messages).then(function(result) {
+        isLoading = false;
+        if (result.error) {
+          messages.push({ role: 'assistant', content: 'Erro: ' + escapeHtml(result.error) });
+        } else {
+          var botText = result.text || '...';
+          var extraWord = extractWordFromInput(clean);
+          if (extraWord) {
+            var m = botText.match(/[""'']([^""'']+)[""'']/);
+            var extraTrans = m ? m[1] : null;
+            if (extraTrans && extraTrans.toLowerCase() !== extraWord.toLowerCase()) {
+              botText += '<br><br>' + renderTranslateResult(extraWord, extraTrans);
+            }
+          }
+          messages.push({ role: 'assistant', content: botText });
         }
-        return result;
+        App.refreshCurrentTab();
+        scrollToBottom();
+      }).catch(function() {
+        isLoading = false;
+        messages.push({ role: 'assistant', content: 'Erro de conexao. Tente novamente.' });
+        App.refreshCurrentTab();
+        scrollToBottom();
       });
     }
-
-    promise.then(function(result) {
-      isLoading = false;
-      if (result.error) {
-        messages.push({ role: 'assistant', content: 'Erro: ' + result.error });
-      } else {
-        messages.push({ role: 'assistant', content: result.text });
-      }
-      App.refreshCurrentTab();
-      scrollToBottom();
-    }).catch(function() {
-      isLoading = false;
-      messages.push({ role: 'assistant', content: 'Erro de conexao. Tente novamente.' });
-      App.refreshCurrentTab();
-      scrollToBottom();
-    });
   }
 
   function scrollToBottom() {
@@ -174,6 +167,23 @@ const ChatTab = (() => {
         sendMessage(this.getAttribute('data-suggestion'));
       });
     }
+
+    // Save buttons inside bot messages
+    container.querySelectorAll('.chat-save-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var word = this.getAttribute('data-save-word');
+        var translation = this.getAttribute('data-save-translation');
+        var result = Store.addWord(word, translation, 'chat');
+        if (result.success) {
+          App.showToast(result.message, 'success');
+          this.textContent = '✓ Salvo!';
+          this.disabled = true;
+          this.style.opacity = '0.5';
+        } else {
+          App.showToast(result.message, 'error');
+        }
+      });
+    });
 
     scrollToBottom();
   }
