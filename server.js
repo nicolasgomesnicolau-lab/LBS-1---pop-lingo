@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const ytSearch = require('yt-search');
 const DICT = require('./dict.js');
+const supabase = require('./supabase.js');
 
 // Load .env manually (no dotenv dependency)
 (function() {
@@ -27,7 +28,8 @@ const YT_API_KEY = process.env.YT_API_KEY || '';
 const KARAOKE_NGROK = process.env.KARAOKE_NGROK || '';
 const KARAOKE_API_KEY = process.env.KARAOKE_API_KEY || '';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || '';
 
 // In-memory admin sessions (token → timestamp)
 const SESSIONS = new Map();
@@ -82,44 +84,65 @@ const MIME = {
   '.ico': 'image/x-icon',
 };
 
-const MOVIES_PATH = path.join(__dirname, 'data', 'movies.json');
+const MOVIES_FILE = path.join(__dirname, 'data', 'movies.json');
 
-function readMoviesFile() {
+// Keep local file as fallback
+function readMoviesLocal() {
   try {
-    return JSON.parse(fs.readFileSync(MOVIES_PATH, 'utf8'));
+    return JSON.parse(fs.readFileSync(MOVIES_FILE, 'utf8'));
   } catch {
     return [];
   }
 }
 
-function writeMoviesFile(movies) {
+function writeMoviesLocal(movies) {
   try {
-    var dir = path.dirname(MOVIES_PATH);
+    var dir = path.dirname(MOVIES_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(MOVIES_PATH, JSON.stringify(movies, null, 2), 'utf8');
-    gitCommitMovies();
+    fs.writeFileSync(MOVIES_FILE, JSON.stringify(movies, null, 2), 'utf8');
     return true;
   } catch (e) {
     return false;
   }
 }
 
-function gitCommitMovies() {
+// Supabase-backed storage
+const SUPABASE_TABLE = 'movies_data';
+
+async function readMoviesSupabase() {
+  if (!supabase) return null;
   try {
-    if (!GITHUB_TOKEN) return;
-    var exec = require('child_process').execSync;
-    exec('git config user.email "deploy@render.com"', { stdio: 'ignore', timeout: 5000 });
-    exec('git config user.name "Render Deploy"', { stdio: 'ignore', timeout: 5000 });
-    exec('git add data/movies.json', { stdio: 'ignore', timeout: 5000 });
-    exec('git commit -m "auto: update movies.json"', { stdio: 'ignore', timeout: 5000 });
-    var origin = exec('git remote get-url origin', { encoding: 'utf8', timeout: 5000 }).toString().trim();
-    if (origin.indexOf('https://') === 0) {
-      var authed = origin.replace('https://', 'https://x-access-token:' + GITHUB_TOKEN + '@');
-      exec('git remote set-url origin "' + authed + '"', { stdio: 'ignore', timeout: 5000 });
-      exec('git push origin main', { stdio: 'ignore', timeout: 15000 });
-      exec('git remote set-url origin "' + origin + '"', { stdio: 'ignore', timeout: 5000 });
-    }
-  } catch (e) {}
+    var { data, error } = await supabase.from(SUPABASE_TABLE).select('data').eq('id', 1).single();
+    if (error) throw error;
+    return data ? data.data : [];
+  } catch (e) {
+    return null;
+  }
+}
+
+async function writeMoviesSupabase(movies) {
+  if (!supabase) return false;
+  try {
+    var { error } = await supabase.from(SUPABASE_TABLE).upsert({ id: 1, data: movies }, { onConflict: 'id' });
+    return !error;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function readMoviesFile() {
+  var fromDb = await readMoviesSupabase();
+  if (fromDb !== null) {
+    writeMoviesLocal(fromDb);
+    return fromDb;
+  }
+  return readMoviesLocal();
+}
+
+async function writeMoviesFile(movies) {
+  var ok = await writeMoviesSupabase(movies);
+  writeMoviesLocal(movies);
+  return ok;
 }
 
 function dataApiSearch(query) {
@@ -425,30 +448,179 @@ function doYouTubeVideoInfo(videoId) {
     return;
   }
 
-  // Movies API — shared server-side storage
-  if (method === 'GET' && url.pathname === '/api/movies') {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(readMoviesFile()));
+  // Auth API — Supabase JWT login/signup
+  if (method === 'POST' && url.pathname === '/api/auth/signup') {
+    readBody(req).then(function(body) {
+      if (!supabase) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Supabase não configurado. Verifique SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY no .env' }));
+        return;
+      }
+      var data = JSON.parse(body);
+      var email = (data.email || '').trim();
+      var password = data.password || '';
+      if (!email || !password) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Email e senha obrigatórios' }));
+        return;
+      }
+      supabase.auth.signUp({ email: email, password: password }).then(function(result) {
+        var r = result.data || {};
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: !!r.user,
+          user: r.user ? { id: r.user.id, email: r.user.email } : null,
+          session: r.session ? { access_token: r.session.access_token, refresh_token: r.session.refresh_token } : null,
+          error: result.error ? result.error.message : null
+        }));
+      });
+    });
     return;
   }
 
-  if (method === 'POST' && url.pathname === '/api/movies/save') {
+  if (method === 'POST' && url.pathname === '/api/auth/login') {
     readBody(req).then(function(body) {
+      if (!supabase) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Supabase não configurado. Verifique SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY no .env' }));
+        return;
+      }
       var data = JSON.parse(body);
-      if (!data.token || !SESSIONS.has(data.token)) {
+      var email = (data.email || '').trim();
+      var password = data.password || '';
+      if (!email || !password) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Email e senha obrigatórios' }));
+        return;
+      }
+      supabase.auth.signInWithPassword({ email: email, password: password }).then(function(result) {
+        var r = result.data || {};
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: !!r.user,
+          user: r.user ? { id: r.user.id, email: r.user.email } : null,
+          session: r.session ? { access_token: r.session.access_token, refresh_token: r.session.refresh_token } : null,
+          error: result.error ? result.error.message : null
+        }));
+      });
+    });
+    return;
+  }
+
+  if (method === 'GET' && url.pathname === '/api/auth/me') {
+    if (!supabase) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ user: null }));
+      return;
+    }
+    var authHeader = req.headers['authorization'] || '';
+    var token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (!token) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ user: null }));
+      return;
+    }
+    supabase.auth.getUser(token).then(function(result) {
+      var user = result.data && result.data.user ? { id: result.data.user.id, email: result.data.user.email } : null;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ user: user, error: result.error ? result.error.message : null }));
+    });
+    return;
+  }
+
+  // Movies API — shared server-side storage via Supabase
+  if (method === 'GET' && url.pathname === '/api/movies') {
+    readMoviesFile().then(function(movies) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(movies));
+    });
+    return;
+  }
+
+  async function verifyToken(token) {
+    if (!token) return null;
+    if (SESSIONS.has(token)) {
+      SESSIONS.set(token, Date.now());
+      return { id: 'admin', email: 'admin' };
+    }
+    try {
+      var result = await supabase.auth.getUser(token);
+      if (result.data && result.data.user) {
+        return { id: result.data.user.id, email: result.data.user.email };
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  if (method === 'POST' && url.pathname === '/api/movies/save') {
+    readBody(req).then(async function(body) {
+      var data = JSON.parse(body);
+      var user = await verifyToken(data.token);
+      if (!user) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, message: 'Sessão inválida' }));
         return;
       }
-      // Renew session
-      SESSIONS.set(data.token, Date.now());
-      if (writeMoviesFile(data.movies)) {
+      writeMoviesFile(data.movies).then(function(ok) {
+        if (ok) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, message: 'Salvo!' }));
+        } else {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, message: 'Erro ao salvar' }));
+        }
+      });
+    });
+    return;
+  }
+
+  // Vocab API — per-user vocabulary storage via Supabase
+  if (method === 'GET' && url.pathname === '/api/vocab') {
+    var authHeader = req.headers['authorization'] || '';
+    var token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (!supabase || !token) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ data: null }));
+      return;
+    }
+    supabase.auth.getUser(token).then(function(result) {
+      var user = result.data && result.data.user;
+      if (!user) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, message: 'Salvo!' }));
-      } else {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, message: 'Erro ao salvar' }));
+        res.end(JSON.stringify({ data: null }));
+        return;
       }
+      supabase.from('vocab_data').select('data').eq('user_id', user.id).single().then(function(r) {
+        var words = (r.data && r.data.data) || [];
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ data: words }));
+      });
+    });
+    return;
+  }
+
+  if (method === 'POST' && url.pathname === '/api/vocab/save') {
+    readBody(req).then(function(body) {
+      var data = JSON.parse(body);
+      var token = data.token || '';
+      var words = data.words || [];
+      if (!supabase || !token) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false }));
+        return;
+      }
+      supabase.auth.getUser(token).then(function(result) {
+        var user = result.data && result.data.user;
+        if (!user) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false }));
+          return;
+        }
+        supabase.from('vocab_data').upsert({ user_id: user.id, data: words, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }).then(function(r) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: !r.error }));
+        });
+      });
     });
     return;
   }

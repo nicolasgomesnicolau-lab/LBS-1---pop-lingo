@@ -15,6 +15,9 @@ const App = (() => {
   };
 
   function init() {
+    // Initialize auth (verify stored session)
+    if (typeof Auth !== 'undefined' && Auth.init) Auth.init();
+
     // Make sure we have our data structure initialized
     if (!localStorage.getItem('lbs_settings')) {
       Store.updateSettings({ studyDirection: 'en-pt' });

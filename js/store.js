@@ -57,12 +57,14 @@ const Store = (() => {
       timesWrong: 0,
     });
     set(KEYS.WORDS, words);
+    syncVocabToServer();
     return { success: true, message: 'Palavra adicionada!' };
   }
 
   function deleteWord(id) {
     const words = getWords().filter(w => w.id !== id);
     set(KEYS.WORDS, words);
+    syncVocabToServer();
   }
 
   function updateWordStats(id, correct) {
@@ -309,6 +311,40 @@ const Store = (() => {
     };
   }
 
+  // ---- Supabase Sync ----
+  function getAuthToken() {
+    if (typeof Auth !== 'undefined' && Auth.getToken) return Auth.getToken();
+    return null;
+  }
+
+  // Fetch vocab from Supabase (replaces local if server has data)
+  function fetchVocabFromServer() {
+    return new Promise(function(resolve) {
+      var token = getAuthToken();
+      if (!token) { resolve(null); return; }
+      fetch('/api/vocab', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      }).then(function(r) { return r.json(); }).then(function(json) {
+        if (json.data && json.data.length > 0) {
+          set(KEYS.WORDS, json.data);
+        }
+        resolve(json.data);
+      }).catch(function() { resolve(null); });
+    });
+  }
+
+  // Sync local vocab to Supabase
+  function syncVocabToServer() {
+    var token = getAuthToken();
+    if (!token) return;
+    var words = getWords();
+    fetch('/api/vocab/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, words: words })
+    }).catch(function() {});
+  }
+
   // ---- Public API ----
   return {
     getWords,
@@ -343,5 +379,7 @@ const Store = (() => {
     updateSettings,
     getAggregatedStats,
     generateId,
+    fetchVocabFromServer,
+    syncVocabToServer,
   };
 })();
