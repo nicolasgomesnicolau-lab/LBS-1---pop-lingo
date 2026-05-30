@@ -444,6 +444,18 @@ const MoviesTab = (() => {
             </div>
           `).join('') : '<p style="color: var(--text-muted); font-size: var(--font-sm);">Nenhuma série criada.</p>'}
         </div>
+
+        <div class="card mb-lg" style="padding: var(--space-xl);">
+          <h3 style="font-size: var(--font-md); margin-bottom: var(--space-base);">💾 Exportar / Importar</h3>
+          <p style="font-size: var(--font-sm); color: var(--text-muted); margin-bottom: var(--space-base);">
+            Exporte os dados para backup antes de fazer deploy. Importe após o deploy para restaurar.
+          </p>
+          <button class="btn btn-secondary btn-sm mb-base" id="admin-export-btn" style="width:100%">📥 Exportar JSON</button>
+          <div class="admin-form-group">
+            <textarea class="input-field" id="admin-import-json" placeholder="Cole o JSON exportado aqui..." style="min-height: 100px;"></textarea>
+          </div>
+          <button class="btn btn-primary btn-sm" id="admin-import-btn" style="width:100%">📤 Importar JSON</button>
+        </div>
       </div>
     `;
   }
@@ -765,8 +777,35 @@ const MoviesTab = (() => {
           saveMoviesToServer().then(function(json) {
             App.showToast(json.success ? 'Série deletada!' : 'Erro ao salvar', json.success ? 'success' : 'error');
             if (json.success) loadMovies().then(function() { App.refreshCurrentTab(); });
-          });
-        }
+    });
+
+    container.querySelector('#admin-export-btn')?.addEventListener('click', () => {
+      var json = JSON.stringify(serverMovies, null, 2);
+      var blob = new Blob([json], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'movies-backup.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      App.showToast('Arquivo baixado! Guarde para importar depois do deploy.', 'success');
+    });
+
+    container.querySelector('#admin-import-btn')?.addEventListener('click', () => {
+      var text = container.querySelector('#admin-import-json')?.value.trim();
+      if (!text) return App.showToast('Cole o JSON primeiro!', 'error');
+      try {
+        var data = JSON.parse(text);
+        if (!Array.isArray(data)) throw new Error('precisa ser array');
+        serverMovies = data;
+        saveMoviesToServer().then(function(json) {
+          App.showToast(json.success ? 'Dados importados!' : 'Erro ao salvar', json.success ? 'success' : 'error');
+          if (json.success) loadMovies().then(function() { App.refreshCurrentTab(); });
+        });
+      } catch (e) {
+        App.showToast('JSON inválido!', 'error');
+      }
+    });
+  }
       });
     });
   }

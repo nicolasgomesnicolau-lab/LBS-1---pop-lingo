@@ -27,6 +27,7 @@ const YT_API_KEY = process.env.YT_API_KEY || '';
 const KARAOKE_NGROK = process.env.KARAOKE_NGROK || '';
 const KARAOKE_API_KEY = process.env.KARAOKE_API_KEY || '';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 
 // In-memory admin sessions (token → timestamp)
 const SESSIONS = new Map();
@@ -96,10 +97,29 @@ function writeMoviesFile(movies) {
     var dir = path.dirname(MOVIES_PATH);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(MOVIES_PATH, JSON.stringify(movies, null, 2), 'utf8');
+    gitCommitMovies();
     return true;
   } catch (e) {
     return false;
   }
+}
+
+function gitCommitMovies() {
+  try {
+    if (!GITHUB_TOKEN) return;
+    var exec = require('child_process').execSync;
+    exec('git config user.email "deploy@render.com"', { stdio: 'ignore', timeout: 5000 });
+    exec('git config user.name "Render Deploy"', { stdio: 'ignore', timeout: 5000 });
+    exec('git add data/movies.json', { stdio: 'ignore', timeout: 5000 });
+    exec('git commit -m "auto: update movies.json"', { stdio: 'ignore', timeout: 5000 });
+    var origin = exec('git remote get-url origin', { encoding: 'utf8', timeout: 5000 }).toString().trim();
+    if (origin.indexOf('https://') === 0) {
+      var authed = origin.replace('https://', 'https://x-access-token:' + GITHUB_TOKEN + '@');
+      exec('git remote set-url origin "' + authed + '"', { stdio: 'ignore', timeout: 5000 });
+      exec('git push origin main', { stdio: 'ignore', timeout: 15000 });
+      exec('git remote set-url origin "' + origin + '"', { stdio: 'ignore', timeout: 5000 });
+    }
+  } catch (e) {}
 }
 
 function dataApiSearch(query) {

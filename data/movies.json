@@ -1,1 +1,89 @@
-[]
+[
+  {
+    "id": "s1",
+    "seriesName": "Pulp Fiction (1994)",
+    "clips": [
+      {
+        "id": "c1",
+        "title": "Say What Again",
+        "videoUrl": "https://www.youtube.com/watch?v=H0dJqN4h7Rg",
+        "subtitles": [
+          { "time": "0:00", "timeSeconds": 0, "text": "What does Marsellus Wallace look like?" },
+          { "time": "0:03", "timeSeconds": 3, "text": "What?" },
+          { "time": "0:05", "timeSeconds": 5, "text": "What country are you from?" },
+          { "time": "0:07", "timeSeconds": 7, "text": "What? What?" },
+          { "time": "0:11", "timeSeconds": 11, "text": "Say what again! Say what again!" },
+          { "time": "0:14", "timeSeconds": 14, "text": "I dare you, I double dare you!" }
+        ],
+        "hasSubtitles": true
+      },
+      {
+        "id": "c2",
+        "title": "Royale with Cheese",
+        "videoUrl": "https://www.youtube.com/watch?v=2xkFt3xR6EY",
+        "subtitles": [
+          { "time": "0:00", "timeSeconds": 0, "text": "You know what they call a Quarter Pounder with Cheese in France?" },
+          { "time": "0:04", "timeSeconds": 4, "text": "No." },
+          { "time": "0:06", "timeSeconds": 6, "text": "A Royale with Cheese." },
+          { "time": "0:08", "timeSeconds": 8, "text": "Royale with Cheese. What do they call a Big Mac?" },
+          { "time": "0:11", "timeSeconds": 11, "text": "Big Mac's a Big Mac, but they call it Le Big Mac." }
+        ],
+        "hasSubtitles": true
+      }
+    ]
+  },
+  {
+    "id": "s2",
+    "seriesName": "The Dark Knight (2008)",
+    "clips": [
+      {
+        "id": "c3",
+        "title": "Why So Serious?",
+        "videoUrl": "https://www.youtube.com/watch?v=KMxWtWECXuE",
+        "subtitles": [
+          { "time": "0:00", "timeSeconds": 0, "text": "I believe whatever doesn't kill you" },
+          { "time": "0:03", "timeSeconds": 3, "text": "simply makes you... stranger." },
+          { "time": "0:07", "timeSeconds": 7, "text": "Why so serious?" }
+        ],
+        "hasSubtitles": true
+      },
+      {
+        "id": "c4",
+        "title": "You Either Die a Hero",
+        "videoUrl": "https://www.youtube.com/watch?v=EXeTwQWrcwY",
+        "subtitles": [
+          { "time": "0:00", "timeSeconds": 0, "text": "You either die a hero" },
+          { "time": "0:02", "timeSeconds": 2, "text": "or you live long enough to see yourself become the villain." }
+        ],
+        "hasSubtitles": true
+      }
+    ]
+  },
+  {
+    "id": "s3",
+    "seriesName": "Friends (TV Series)",
+    "clips": [
+      {
+        "id": "c5",
+        "title": "How You Doin'?",
+        "videoUrl": "https://www.youtube.com/watch?v=4J0y9gMBzkI",
+        "subtitles": [
+          { "time": "0:00", "timeSeconds": 0, "text": "How you doin'?" },
+          { "time": "0:03", "timeSeconds": 3, "text": "I'm doin' good, baby. How you doin'?" }
+        ],
+        "hasSubtitles": true
+      },
+      {
+        "id": "c6",
+        "title": "We Were on a Break!",
+        "videoUrl": "https://www.youtube.com/watch?v=L2wT8IXDBcA",
+        "subtitles": [
+          { "time": "0:00", "timeSeconds": 0, "text": "We were on a break!" },
+          { "time": "0:03", "timeSeconds": 3, "text": "That's not the point!" },
+          { "time": "0:05", "timeSeconds": 5, "text": "It is the point! We were on a break!" }
+        ],
+        "hasSubtitles": true
+      }
+    ]
+  }
+]
