@@ -56,3 +56,20 @@ CREATE POLICY "Users can manage their own achievements"
   FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+-- Tracking data table (achievement tracking state for multi-device sync)
+CREATE TABLE IF NOT EXISTS tracking_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID UNIQUE NOT NULL,
+  data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE tracking_data ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own tracking" ON tracking_data;
+CREATE POLICY "Users can manage their own tracking"
+  ON tracking_data
+  FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);

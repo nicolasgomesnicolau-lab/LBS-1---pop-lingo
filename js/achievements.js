@@ -9,12 +9,12 @@ const Achievements = (() => {
 
   var RANKS = [
     { id: 'bronze', label: '🥉 Bronze', min: 0 },
-    { id: 'prata', label: '🥈 Prata', min: 10 },
-    { id: 'ouro', label: '🥇 Ouro', min: 20 },
-    { id: 'platina', label: '💎 Platina', min: 35 },
-    { id: 'diamante', label: '🔷 Diamante', min: 50 },
-    { id: 'mestre', label: '👑 Mestre', min: 70 },
-    { id: 'lenda', label: '🔥 Lenda', min: 90 },
+    { id: 'prata', label: '🥈 Prata', min: 8 },
+    { id: 'ouro', label: '🥇 Ouro', min: 18 },
+    { id: 'platina', label: '💎 Platina', min: 30 },
+    { id: 'diamante', label: '🔷 Diamante', min: 45 },
+    { id: 'mestre', label: '👑 Mestre', min: 55 },
+    { id: 'lenda', label: '🔥 Lenda', min: 65 },
   ];
 
   var ALL = [
@@ -25,30 +25,50 @@ const Achievements = (() => {
     { id: 'fifty_words', title: 'Biblioteca Pessoal', desc: '50 palavras salvas', icon: '📚', category: 'Vocabulário', check: function(s) { return s.wordCount >= 50; } },
     { id: 'hundred_words', title: 'Vocabulário Rico', desc: '100 palavras salvas', icon: '📚', category: 'Vocabulário', check: function(s) { return s.wordCount >= 100; } },
     { id: 'hundredfifty_words', title: 'Arquivo Linguístico', desc: '150 palavras salvas', icon: '📚', category: 'Vocabulário', check: function(s) { return s.wordCount >= 150; } },
+    // 📚 Biblioteca
+    { id: 'organizado', title: 'Organizado', desc: 'Revise palavras adicionadas há mais de 7 dias', icon: '📚', category: 'Biblioteca', check: function(s) { return s.oldWordsReviewed >= 1; } },
+    { id: 'tesouro_escondido', title: 'Tesouro Escondido', desc: 'Revise uma palavra esquecida há 30 dias', icon: '📚', category: 'Biblioteca', check: function(s) { return s.oldWordsReviewed30 >= 1; } },
+    { id: 'guardiao_palavras', title: 'Guardião das Palavras', desc: 'Não remova nenhuma palavra por 30 dias', icon: '📚', category: 'Biblioteca', check: function(s) { return s.noDeletion30Days; } },
+    { id: 'arquivo_historico', title: 'Arquivo Histórico', desc: 'Tenha palavras salvas em 10 datas diferentes', icon: '📚', category: 'Biblioteca', check: function(s) { return s.wordsOn10Dates; } },
     // 🎯 Study
     { id: 'first_correct', title: 'Primeiro Acerto', desc: '1 acerto no Study', icon: '🎯', category: 'Study', check: function(s) { return s.totalCorrect >= 1; } },
     { id: 'ten_correct', title: 'Bom Começo', desc: '10 acertos no Study', icon: '🎯', category: 'Study', check: function(s) { return s.totalCorrect >= 10; } },
     { id: 'fifty_correct', title: 'Mestre dos Acertos', desc: '50 acertos no Study', icon: '🎯', category: 'Study', check: function(s) { return s.totalCorrect >= 50; } },
     { id: 'hundred_correct', title: 'Memória Afiada', desc: '100 acertos no Study', icon: '🎯', category: 'Study', check: function(s) { return s.totalCorrect >= 100; } },
     { id: 'twohundred_correct', title: 'Especialista', desc: '200 acertos no Study', icon: '🎯', category: 'Study', check: function(s) { return s.totalCorrect >= 200; } },
+    { id: 'virada_jogo', title: 'Virada de Jogo', desc: 'Acerte uma palavra após errá-la 3 vezes', icon: '🎯', category: 'Study', check: function(s) { return s.comebackWord >= 1; } },
+    { id: 'recuperacao', title: 'Recuperação', desc: 'Acerte 5 palavras que já errou no passado', icon: '🎯', category: 'Study', check: function(s) { return s.firstReviewCount >= 5; } },
+    { id: 'foco_total', title: 'Foco Total', desc: 'Complete 3 sessões seguidas', icon: '🎯', category: 'Study', check: function(s) { return s.bestStreak >= 3; } },
+    { id: 'aprendizado_limpo', title: 'Aprendizado Limpo', desc: 'Complete uma sessão sem nenhum erro', icon: '🎯', category: 'Study', check: function(s) { return s.cleanSession; } },
     // 🔥 Sequência
     { id: 'three_days', title: '3 Dias Seguidos', desc: 'Pratique 3 dias seguidos', icon: '🔥', category: 'Sequência', check: function(s) { return s.bestStreak >= 3; } },
     { id: 'seven_days', title: 'Semana Cheia', desc: '7 dias seguidos', icon: '🔥', category: 'Sequência', check: function(s) { return s.bestStreak >= 7; } },
     { id: 'fourteen_days', title: 'Persistente', desc: '14 dias seguidos', icon: '🔥', category: 'Sequência', check: function(s) { return s.bestStreak >= 14; } },
     { id: 'twentyone_days', title: 'Disciplina', desc: '21 dias seguidos', icon: '🔥', category: 'Sequência', check: function(s) { return s.bestStreak >= 21; } },
     { id: 'thirty_days', title: 'Hábito Formado', desc: '30 dias seguidos', icon: '🔥', category: 'Sequência', check: function(s) { return s.bestStreak >= 30; } },
+    // 🔥 Consistência
+    { id: 'nem_um_dia_perdido', title: 'Nem Um Dia Perdido', desc: 'Complete a meta por 10 dias seguidos', icon: '🔥', category: 'Consistência', check: function(s) { return s.goalStreak >= 10; } },
+    { id: 'presenca_garantida', title: 'Presença Garantida', desc: 'Entre no app 15 dias diferentes no mês', icon: '🔥', category: 'Consistência', check: function(s) { return s.daysInMonth >= 15; } },
     // 🎵 Music
     { id: 'first_music', title: 'Primeira Música', desc: 'Estude 1 música', icon: '🎵', category: 'Music', check: function(s) { return s.musicCount >= 1; } },
     { id: 'five_music', title: 'Melômano', desc: '5 músicas estudadas', icon: '🎵', category: 'Music', check: function(s) { return s.musicCount >= 5; } },
     { id: 'ten_music', title: 'Playlist Favorita', desc: '10 músicas estudadas', icon: '🎵', category: 'Music', check: function(s) { return s.musicCount >= 10; } },
     { id: 'twenty_music', title: 'Viciado em Música', desc: '20 músicas estudadas', icon: '🎵', category: 'Music', check: function(s) { return s.musicCount >= 20; } },
+    { id: 'refrao_cabeca', title: 'Refrão na Cabeça', desc: 'Complete a mesma música 3 vezes', icon: '🎵', category: 'Music', check: function(s) { return s.songReplay3; } },
+    { id: 'hit_dia', title: 'Hit do Dia', desc: 'Estude 3 músicas no mesmo dia', icon: '🎵', category: 'Music', check: function(s) { return s.dailySongsCount >= 3; } },
+    { id: 'cantor_chuveiro', title: 'Cantor de Chuveiro', desc: 'Complete um karaokê inteiro', icon: '🎵', category: 'Music', check: function(s) { return s.karaokeCompleted; } },
+    { id: 'maratona_musical', title: 'Maratona Musical', desc: 'Estude músicas por 30 minutos em um dia', icon: '🎵', category: 'Music', check: function(s) { return s.musicMinutes30; } },
+    { id: 'descobridor_hits', title: 'Descobridor de Hits', desc: 'Estude 10 artistas diferentes', icon: '🎵', category: 'Music', check: function(s) { return s.uniqueArtists >= 10; } },
     // 🎬 Movies
     { id: 'first_clip', title: 'Primeira Cena', desc: 'Assista 1 vídeo', icon: '🎬', category: 'Movies', check: function(s) { return s.clipCount >= 1; } },
     { id: 'five_clips', title: 'Cinéfilo', desc: '5 vídeos assistidos', icon: '🎬', category: 'Movies', check: function(s) { return s.clipCount >= 5; } },
     { id: 'ten_clips', title: 'Maratona', desc: '10 vídeos assistidos', icon: '🎬', category: 'Movies', check: function(s) { return s.clipCount >= 10; } },
     { id: 'twenty_clips', title: 'Pipoca Sempre Pronta', desc: '20 vídeos assistidos', icon: '🎬', category: 'Movies', check: function(s) { return s.clipCount >= 20; } },
+    { id: 'sessao_tarde', title: 'Sessão da Tarde', desc: 'Assista 3 vídeos no mesmo dia', icon: '🎬', category: 'Movies', check: function(s) { return s.dailyClipCount >= 3; } },
+    { id: 'diretor_favorito', title: 'Diretor Favorito', desc: 'Assista 5 vídeos completos na mesma semana', icon: '🎬', category: 'Movies', check: function(s) { return s.weeklyClipCount >= 5; } },
+    { id: 'legenda_viva', title: 'Legenda Viva', desc: 'Aprenda 20 palavras através dos vídeos', icon: '🎬', category: 'Movies', check: function(s) { return s.wordsFromMovies >= 20; } },
     // ⭐ Especiais
-    { id: 'explorer', title: 'Explorador', desc: 'Entre em todas as abas', icon: '⭐', category: 'Especiais', check: function(s) { return s.tabsVisited >= 5; } },
+    { id: 'explorer', title: 'Explorador', desc: 'Entre em todas as abas', icon: '⭐', category: 'Especiais', check: function(s) { return s.tabsVisited >= 6; } },
     { id: 'all_in_one_day', title: 'Tudo em Um Dia', desc: 'Use Music, Movies e Study no mesmo dia', icon: '⭐', category: 'Especiais', check: function(s) { return s.allInOneDay; } },
     { id: 'early_bird', title: 'Madrugador', desc: 'Estude antes das 6h', icon: '⭐', category: 'Especiais', check: function(s) { return s.earlyBird; } },
     { id: 'night_owl', title: 'Coruja', desc: 'Estude após meia-noite', icon: '⭐', category: 'Especiais', check: function(s) { return s.nightOwl; } },
@@ -67,6 +87,20 @@ const Achievements = (() => {
     { id: 'first_review', title: 'Primeira Revisão', desc: 'Acerte uma palavra que já errou antes', icon: '⭐', category: 'Especiais', check: function(s) { return s.firstReview; } },
     { id: 'comeback', title: 'De Volta ao Jogo', desc: 'Estude após ficar 7 dias sem entrar', icon: '⭐', category: 'Especiais', check: function(s) { return s.comeback; } },
     { id: 'multimedia_day', title: 'Multimídia', desc: 'Aprenda pela Music e Movies no mesmo dia', icon: '⭐', category: 'Especiais', check: function(s) { return s.multimediaDay; } },
+    { id: 'primeira_descoberta', title: 'Primeira Descoberta', desc: 'Revele sua primeira tradução', icon: '⭐', category: 'Especiais', check: function(s) { return s.translationsOpened >= 1; } },
+    { id: 'cacador_expressoes', title: 'Caçador de Expressões', desc: 'Salve uma frase completa', icon: '⭐', category: 'Especiais', check: function(s) { return s.phrasesSaved >= 1; } },
+    { id: 'no_embalo', title: 'No Embalo', desc: 'Faça Music e depois Study sem sair do app', icon: '⭐', category: 'Especiais', check: function(s) { return s.musicThenStudy; } },
+    { id: 'mente_curiosa', title: 'Mente Curiosa', desc: 'Abra 10 palavras novas em um único dia', icon: '⭐', category: 'Especiais', check: function(s) { return s.dailyTranslations >= 10; } },
+    { id: 'dia_perfeito', title: 'Dia Perfeito', desc: 'Complete a meta sem errar nenhuma questão', icon: '⭐', category: 'Especiais', check: function(s) { return s.perfectDay; } },
+    { id: 'colecao_variada', title: 'Coleção Variada', desc: 'Salve palavras de 15 letras diferentes', icon: '⭐', category: 'Especiais', check: function(s) { return s.letterCount >= 15; } },
+    { id: 'explorador_musical', title: 'Explorador Musical', desc: 'Estude músicas de 5 artistas diferentes', icon: '⭐', category: 'Especiais', check: function(s) { return s.uniqueArtists >= 5; } },
+    { id: 'maratonista', title: 'Maratonista', desc: 'Passe 1 hora estudando em um único dia', icon: '⭐', category: 'Especiais', check: function(s) { return s.studyHourToday; } },
+    // 🏆 Secretas
+    { id: 'insomnia_linguistica', title: 'Insônia Linguística', desc: 'Estude entre 2h e 4h da manhã', icon: '🏆', category: 'Secretas', check: function(s) { return s.insomniaStudy; } },
+    { id: 'velocista', title: 'Velocista', desc: 'Complete uma atividade em menos de 30 segundos', icon: '🏆', category: 'Secretas', check: function(s) { return s.lightning30s; } },
+    { id: 'retorno_triunfal', title: 'Retorno Triunfal', desc: 'Volte após 30 dias sem entrar', icon: '🏆', category: 'Secretas', check: function(s) { return s.comeback30; } },
+    { id: 'incansavel', title: 'O Incansável', desc: 'Estude 3 horas acumuladas em uma semana', icon: '🏆', category: 'Secretas', check: function(s) { return s.study3HoursWeek; } },
+    { id: 'lenda_urbana', title: 'Lenda Urbana', desc: 'Desbloqueie 25 conquistas', icon: '🏆', category: 'Secretas', check: function(s) { return s.totalAchieved >= 25; } },
   ];
 
   function getCompleted() {
@@ -123,34 +157,43 @@ const Achievements = (() => {
 
   function getState() {
     var words = (typeof Store !== 'undefined' && Store.getWords) ? Store.getWords() : [];
+    var musicHistory = (typeof Store !== 'undefined' && Store.getMusicHistory) ? Store.getMusicHistory() : [];
     var stats = (typeof Store !== 'undefined' && Store.getStudyStats) ? Store.getStudyStats() : { history: [] };
     var today = new Date().toISOString().split('T')[0];
     var todayEntry = stats.history.find(function(h) { return h.date === today; }) || { correct: 0, wrong: 0, wordsStudied: 0 };
+    var hour = new Date().getHours();
 
+    // First letters
     var firstLetters = {};
     for (var wi = 0; wi < words.length; wi++) {
       var fl = words[wi].word.charAt(0).toLowerCase();
       if (fl.match(/[a-z]/)) firstLetters[fl] = true;
     }
 
-    var totalCorrect = 0;
-    var totalWrong = 0;
-    var totalDaysStudied = stats.history.length;
-    var bestStreak = calcBestStreak(stats.history);
-    var currentStreak = calcCurrentStreak(stats.history);
-
+    // Totals from history
+    var totalCorrect = 0, totalWrong = 0;
     for (var hi = 0; hi < stats.history.length; hi++) {
       totalCorrect += stats.history[hi].correct || 0;
       totalWrong += stats.history[hi].wrong || 0;
     }
+    var totalDaysStudied = stats.history.length;
+    var bestStreak = calcBestStreak(stats.history);
+    var currentStreak = calcCurrentStreak(stats.history);
 
-    var hour = new Date().getHours();
+    // Tracking data
+    var track = (typeof Store !== 'undefined' && Store.getTrack) ? Store.getTrack() : {};
+    // Ensure defaults
+    if (!track.tabsVisited) track.tabsVisited = [];
+    if (!track.dailyTabs) track.dailyTabs = {};
+    if (!track.clipsWatched) track.clipsWatched = {};
+    if (!track.songPlayCount) track.songPlayCount = {};
+    if (!track.dailySongs) track.dailySongs = {};
+    if (!track.dailyStudyTimeMs) track.dailyStudyTimeMs = {};
+    if (!track.dailyTranslations) track.dailyTranslations = {};
 
-    // Read achievement tracking data
-    var track = (typeof Store !== 'undefined' && Store.getTrack) ? Store.getTrack() : { tabsVisited: [], dailyTabs: {}, clipsWatched: {}, translationsOpened: 0, bestCorrectStreak: 0, lightningStudy: false };
-    var musicCount = (typeof Store !== 'undefined' && Store.getMusicHistory) ? Store.getMusicHistory().length : 0;
+    var musicCount = musicHistory.length;
 
-    // Count unique clips ever watched
+    // Clip count — unique clips ever
     var clipWatchedSet = {};
     var clipDates = track.clipsWatched || {};
     for (var cd in clipDates) {
@@ -159,10 +202,26 @@ const Achievements = (() => {
     }
     var clipCount = Object.keys(clipWatchedSet).length;
 
-    // Compute allInOneDay: music + movies + study same day
+    // Daily clips
+    var dailyClipIds = clipDates[today] || [];
+    var dailyClipCount = dailyClipIds.length;
+
+    // Weekly clips — count unique clips in last 7 days
+    var weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    var weeklyClipSet = {};
+    for (var cd2 in clipDates) {
+      if (cd2 >= weekAgo.toISOString().split('T')[0]) {
+        for (var ci2 = 0; ci2 < (clipDates[cd2] || []).length; ci2++) {
+          weeklyClipSet[clipDates[cd2][ci2]] = true;
+        }
+      }
+    }
+    var weeklyClipCount = Object.keys(weeklyClipSet).length;
+
+    // Daily tabs (allInOneDay, multimediaDay)
     var daily = track.dailyTabs || {};
-    var allInOneDay = false;
-    var multimediaDay = false;
+    var allInOneDay = false, multimediaDay = false;
     if (daily[today]) {
       var hasMusic = !!daily[today]['music'];
       var hasMovies = !!daily[today]['movies'];
@@ -171,23 +230,112 @@ const Achievements = (() => {
       multimediaDay = hasMusic && hasMovies;
     }
 
-    // weekendWarrior: studied on both Sat and Sun in any weekend
-    var weekendWarrior = calcWeekendWarrior(stats.history);
+    // Words from movies source
+    var wordsFromMovies = 0, phrasesSaved = 0;
+    for (var w = 0; w < words.length; w++) {
+      if (words[w].source === 'movies') wordsFromMovies++;
+      if ((words[w].word || '').indexOf(' ') >= 0) phrasesSaved++;
+    }
 
-    // goalStreak: consecutive days meeting dailyGoal
-    var goalStreak = calcGoalStreak(stats);
+    // Unique word dates (Arquivo Histórico)
+    var wordDates = {};
+    for (var w2 = 0; w2 < words.length; w2++) {
+      var cd3 = (words[w2].createdAt || '').split('T')[0];
+      if (cd3) wordDates[cd3] = true;
+    }
+    var wordsOn10Dates = Object.keys(wordDates).length >= 10;
 
-    // comeback: studied after 7+ day gap
-    var comeback = calcComeback(stats.history);
+    // Old words reviewed (words added >7d ago with timesCorrect > 0)
+    var oldWordsReviewed = 0, oldWordsReviewed30 = 0;
+    var sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    var thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    for (var w3 = 0; w3 < words.length; w3++) {
+      var created = new Date(words[w3].createdAt || 0);
+      if (created < sevenDaysAgo && (words[w3].timesCorrect || 0) > 0) oldWordsReviewed++;
+      if (created < thirtyDaysAgo && (words[w3].timesCorrect || 0) > 0) oldWordsReviewed30++;
+    }
 
-    // firstReview: check if any word was ever wrong then later correct
-    var firstReview = false;
-    for (var wri = 0; wri < words.length; wri++) {
-      if (words[wri].timesWrong > 0 && words[wri].timesCorrect > 0) {
+    // firstReview + comebackWord + firstReviewCount (words wrong then later correct)
+    var firstReview = false, comebackWord = 0, firstReviewCount = 0;
+    for (var w4 = 0; w4 < words.length; w4++) {
+      if (words[w4].timesWrong > 0 && words[w4].timesCorrect > 0) {
         firstReview = true;
-        break;
+        firstReviewCount++;
+        if (words[w4].timesWrong >= 3) comebackWord++;
       }
     }
+
+    // Song replay (same song 3x)
+    var songPlayCount = track.songPlayCount || {};
+    var songReplay3 = false;
+    for (var sp in songPlayCount) { if (songPlayCount[sp] >= 3) { songReplay3 = true; break; } }
+
+    // Daily songs
+    var dailySongs = track.dailySongs || {};
+    var dailySongsCount = (dailySongs[today] || []).length;
+
+    // Unique artists
+    var artistSet = {};
+    for (var mi = 0; mi < musicHistory.length; mi++) {
+      if (musicHistory[mi].artist) artistSet[musicHistory[mi].artist] = true;
+    }
+    var uniqueArtists = Object.keys(artistSet).length;
+
+    // Study time today
+    var dailyStudyMs = track.dailyStudyTimeMs || {};
+    var studyMsToday = dailyStudyMs[today] || 0;
+    var studyHourToday = studyMsToday >= 3600000; // 1 hour
+
+    // Weekly study time
+    var weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    var weekMs = 0;
+    for (var ds in dailyStudyMs) {
+      if (ds >= weekStart.toISOString().split('T')[0]) weekMs += dailyStudyMs[ds];
+    }
+    var study3HoursWeek = weekMs >= 10800000; // 3 hours
+
+    // Clean session (today, no errors)
+    var cleanSession = todayEntry.wrong === 0 && todayEntry.wordsStudied > 0;
+    var perfectDay = todayEntry.wrong === 0 && (todayEntry.correct || 0) >= (stats.dailyGoal || 10);
+
+    // goalStreak
+    var goalStreak = calcGoalStreak(stats);
+
+    // comeback 7d + 30d
+    var comeback = calcComeback(stats.history, 7);
+    var comeback30 = calcComeback(stats.history, 30);
+
+    // noDeletion30Days — check lastDeletionDate from track
+    var lastDeletion = track.lastDeletionDate;
+    var noDeletion30Days = !lastDeletion || ((Date.now() - new Date(lastDeletion).getTime()) > 30 * 24 * 60 * 60 * 1000);
+
+    // Daily translations
+    var dailyTrans = track.dailyTranslations || {};
+    var dailyTranslationsCount = dailyTrans[today] || 0;
+
+    // Days in month
+    var thisMonth = today.substring(0, 7);
+    var daysInMonth = 0;
+    for (var hi2 = 0; hi2 < stats.history.length; hi2++) {
+      if ((stats.history[hi2].date || '').substring(0, 7) === thisMonth) daysInMonth++;
+    }
+
+    // Music minutes 30
+    // Approximate: count music session time from dailyStudyTimeMs that was music
+    // For now, use a simpler check: musicCount > 0 and studyTime today > 30 min of music
+    var musicMinutes30 = track.musicMinutesToday || false;
+
+    // Karaoke completed
+    var karaokeCompleted = track.karaokeCompleted || false;
+
+    // Music then study (no_embalo)
+    var musicThenStudy = track.musicThenStudy || false;
+
+    // lightning30s (velocista)
+    var lightning30s = track.lightning30s || false;
+
+    // insomnia (2h-4h)
+    var insomniaStudy = hour >= 2 && hour < 4;
 
     return {
       wordCount: words.length,
@@ -198,21 +346,47 @@ const Achievements = (() => {
       musicCount: musicCount,
       clipCount: clipCount,
       tabsVisited: track.tabsVisited.length,
+      dailyClipCount: dailyClipCount,
+      weeklyClipCount: weeklyClipCount,
       allInOneDay: allInOneDay,
+      multimediaDay: multimediaDay,
       earlyBird: hour < 6,
       nightOwl: hour >= 0 && hour < 4,
-      weekendWarrior: weekendWarrior,
+      insomniaStudy: insomniaStudy,
+      weekendWarrior: calcWeekendWarrior(stats.history),
       noSkipSong: false,
       noTranslateVideo: false,
-      lightningStudy: track.lightningStudy,
-      bestStreakCorrect: track.bestCorrectStreak,
+      lightningStudy: track.lightningStudy || false,
+      lightning30s: lightning30s,
+      bestStreakCorrect: track.bestCorrectStreak || 0,
       goalStreak: goalStreak,
       totalDaysStudied: totalDaysStudied,
-      translationsOpened: track.translationsOpened,
+      translationsOpened: track.translationsOpened || 0,
+      dailyTranslations: dailyTranslationsCount,
       letterCount: Object.keys(firstLetters).length,
       firstReview: firstReview,
+      firstReviewCount: firstReviewCount,
+      comebackWord: comebackWord,
       comeback: comeback,
-      multimediaDay: multimediaDay,
+      comeback30: comeback30,
+      cleanSession: cleanSession,
+      perfectDay: perfectDay,
+      wordsFromMovies: wordsFromMovies,
+      phrasesSaved: phrasesSaved,
+      wordsOn10Dates: wordsOn10Dates,
+      oldWordsReviewed: oldWordsReviewed,
+      oldWordsReviewed30: oldWordsReviewed30,
+      noDeletion30Days: noDeletion30Days,
+      songReplay3: songReplay3,
+      dailySongsCount: dailySongsCount,
+      uniqueArtists: uniqueArtists,
+      musicMinutes30: musicMinutes30,
+      karaokeCompleted: karaokeCompleted,
+      studyHourToday: studyHourToday,
+      study3HoursWeek: study3HoursWeek,
+      daysInMonth: daysInMonth,
+      musicThenStudy: musicThenStudy,
+      totalAchieved: Object.keys(getCompleted()).length,
     };
   }
 
@@ -305,14 +479,15 @@ const Achievements = (() => {
     return streak;
   }
 
-  function calcComeback(history) {
+  function calcComeback(history, minDays) {
     if (!history || history.length < 2) return false;
+    minDays = minDays || 7;
     var sorted = history.map(function(h) { return h.date; }).sort();
     for (var i = 1; i < sorted.length; i++) {
       var prev = new Date(sorted[i-1]);
       var curr = new Date(sorted[i]);
       var diff = (curr - prev) / (1000 * 60 * 60 * 24);
-      if (diff >= 7) return true;
+      if (diff >= minDays) return true;
     }
     return false;
   }

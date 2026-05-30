@@ -647,9 +647,20 @@ const StudyTab = (() => {
     sessionStreak = 0;
   }
 
+  var _lastWordTime = Date.now();
+
   function recordStudyWord(word, isCorrect) {
     Store.updateWordStats(word.id, isCorrect);
     Store.recordStudyResult(isCorrect);
+
+    // Track per-word time for study time achievements
+    var now = Date.now();
+    var wordMs = now - _lastWordTime;
+    _lastWordTime = now;
+    if (typeof Store !== 'undefined' && Store.recordStudyTime) {
+      Store.recordStudyTime(wordMs);
+    }
+
     if (isCorrect) {
       sessionCorrect++;
       sessionStreak++;
@@ -663,9 +674,12 @@ const StudyTab = (() => {
 
     // Check lightning study: all words done in under 2 minutes
     if (currentWordIndex === studyWords.length - 1 || currentWordIndex === reviewWords.length - 1) {
-      var elapsed = (Date.now() - sessionStartTime) / 1000;
+      var elapsed = (now - sessionStartTime) / 1000;
       if (elapsed < 120 && typeof Store !== 'undefined' && Store.recordLightningStudy) {
         Store.recordLightningStudy();
+      }
+      if (elapsed < 30 && typeof Store !== 'undefined' && Store.setLightning30s) {
+        Store.setLightning30s();
       }
     }
 

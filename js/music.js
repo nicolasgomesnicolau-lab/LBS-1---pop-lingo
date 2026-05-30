@@ -457,6 +457,9 @@ const MusicTab = (() => {
     if (typeof Store !== 'undefined' && Store.addMusicHistory) {
       Store.addMusicHistory({ title: song.title, artist: song.artist, thumbnail: '', youtubeId: song.videoId, partsCompleted: [], totalParts: 3 });
     }
+    if (typeof Store !== 'undefined' && Store.recordSongPlay) {
+      Store.recordSongPlay(song.title, song.artist);
+    }
     setTimeout(function() {
       if (typeof Achievements !== 'undefined') {
         Achievements.checkAll(Achievements.getState());

@@ -67,6 +67,7 @@ const Store = (() => {
     const words = getWords().filter(w => w.id !== id);
     set(KEYS.WORDS, words);
     syncVocabToServer();
+    if (typeof recordDeletion !== 'undefined') recordDeletion();
   }
 
   function updateWordStats(id, correct) {
@@ -324,6 +325,15 @@ const Store = (() => {
         translationsOpened: 0,
         bestCorrectStreak: 0,
         lightningStudy: false,
+        songPlayCount: {},
+        dailySongs: {},
+        dailyStudyTimeMs: {},
+        dailyTranslations: {},
+        lastDeletionDate: null,
+        musicMinutesToday: false,
+        karaokeCompleted: false,
+        musicThenStudy: false,
+        lightning30s: false,
       };
       set(KEYS.ACHIEVEMENT_TRACK, t);
     }
@@ -344,6 +354,10 @@ const Store = (() => {
     var today = new Date().toISOString().split('T')[0];
     if (!t.dailyTabs[today]) t.dailyTabs[today] = {};
     t.dailyTabs[today][tabId] = true;
+    // Track music→study flow
+    if (tabId === 'study' && t.dailyTabs[today] && t.dailyTabs[today]['music']) {
+      t.musicThenStudy = true;
+    }
     saveTrack(t);
   }
 
@@ -358,6 +372,9 @@ const Store = (() => {
   function incrementTranslations() {
     var t = getTrack();
     t.translationsOpened++;
+    var today = new Date().toISOString().split('T')[0];
+    if (!t.dailyTranslations[today]) t.dailyTranslations[today] = 0;
+    t.dailyTranslations[today]++;
     saveTrack(t);
   }
 
@@ -372,6 +389,43 @@ const Store = (() => {
   function recordLightningStudy() {
     var t = getTrack();
     t.lightningStudy = true;
+    saveTrack(t);
+  }
+
+  function recordSongPlay(title, artist) {
+    var t = getTrack();
+    var key = title + '|' + artist;
+    if (!t.songPlayCount) t.songPlayCount = {};
+    t.songPlayCount[key] = (t.songPlayCount[key] || 0) + 1;
+    var today = new Date().toISOString().split('T')[0];
+    if (!t.dailySongs[today]) t.dailySongs[today] = [];
+    if (t.dailySongs[today].indexOf(key) === -1) t.dailySongs[today].push(key);
+    saveTrack(t);
+  }
+
+  function recordStudyTime(ms) {
+    var t = getTrack();
+    var today = new Date().toISOString().split('T')[0];
+    if (!t.dailyStudyTimeMs) t.dailyStudyTimeMs = {};
+    t.dailyStudyTimeMs[today] = (t.dailyStudyTimeMs[today] || 0) + ms;
+    saveTrack(t);
+  }
+
+  function recordDeletion() {
+    var t = getTrack();
+    t.lastDeletionDate = new Date().toISOString();
+    saveTrack(t);
+  }
+
+  function setKaraokeCompleted() {
+    var t = getTrack();
+    t.karaokeCompleted = true;
+    saveTrack(t);
+  }
+
+  function setLightning30s() {
+    var t = getTrack();
+    t.lightning30s = true;
     saveTrack(t);
   }
 
@@ -453,5 +507,10 @@ const Store = (() => {
     incrementTranslations,
     recordCorrectStreak,
     recordLightningStudy,
+    recordSongPlay,
+    recordStudyTime,
+    recordDeletion,
+    setKaraokeCompleted,
+    setLightning30s,
   };
 })();

@@ -20,6 +20,18 @@ Busque músicas no YouTube, toque com legendas em karaokê geradas por IA. Mesma
 ### 💬 Chat
 Tire dúvidas em português sobre palavras, frases ou gramática inglesa. A IA responde em português direto, sem firulas.
 
+### 👤 Perfil
+Aba com **estatísticas do usuário** (palavras salvas, acertos, sequência de dias), **gráfico de atividade** (heatmap 28 dias), **grade de conquistas** com filtro por categoria, e **leaderboard** ranqueando usuários por número de conquistas desbloqueadas, incluindo perfis falsos com avatares.
+
+### 🏆 Conquistas (Achievements)
+Sistema de **74 conquistas** em 7 categorias (Vocabulário, Biblioteca, Study, Sequência, Consistência, Music, Movies, Especiais, Secretas) com 7 ranks (Bronze → Lenda). As conquistas são verificadas automaticamente conforme você usa o app — salva palavras, assiste clipes, estuda músicas, mantém sequências, etc. Os dados ficam em `localStorage` e são sincronizados ao Supabase quando logado.
+
+### 📖 Modos de Estudo
+- **Normal**: Flashcards com todas as palavras da biblioteca
+- **Revisão**: Apenas palavras que você errou, em rodadas até acertar todas
+- **Ranked**: 2 vidas, perde tudo ao errar — tela de derrota se falhar
+- **Soft Match**: Digitação com tolerância a typos (Levenshtein ≤1 para palavras curtas, ≤2 para ≥5 caracteres)
+
 ---
 
 ## APIs & Services Used
@@ -95,6 +107,8 @@ This app uses Supabase for authentication (JWT login) and shared data storage (m
 │   ├── movies.js       # Movies tab: list, player, admin, server sync
 │   ├── music.js        # Music tab: search, YouTube player, karaoke
 │   ├── store.js        # Data layer (localStorage + Supabase sync)
+│   ├── achievements.js # Achievement definitions, checks, ranks, server sync
+│   ├── profile.js      # Profile tab: stats, heatmap, leaderboard, avatars
 │   └── chat.js         # Chat tab: messages, AI conversation
 ├── data/
 │   ├── movies.json     # Local fallback for movie data
@@ -109,7 +123,8 @@ This app uses Supabase for authentication (JWT login) and shared data storage (m
 - **Movies & Vocab** are stored in **Supabase** (`movies_data` and `vocab_data` tables). Movies are visible to everyone; vocab is per-user (requires login).
 - **`data/movies.json`** is kept as a local fallback (synced from Supabase when available).
 - **`data/karaoke_cache/`** is gitignored. Transcriptions are regenerated on demand and cached server-side.
-- **User playlists, music history, and settings** are stored in `localStorage`.
+- **User playlists, music history, settings, and achievement state** are stored in `localStorage`.
+- **Achievements & tracking data** sync to Supabase per-user when logged in (`achievements_data` and `tracking_data` tables) for cross-device persistence.
 - **Auth sessions** use Supabase JWT tokens stored in `localStorage`.
 
 ---

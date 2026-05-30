@@ -676,6 +676,57 @@ function doYouTubeVideoInfo(videoId) {
     return;
   }
 
+  // Tracking data API (achievement tracking multi-device sync)
+  if (method === 'GET' && url.pathname === '/api/tracking') {
+    var authHeader = req.headers['authorization'] || '';
+    var token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (!supabase || !token) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ data: null }));
+      return;
+    }
+    supabase.auth.getUser(token).then(function(result) {
+      var user = result.data && result.data.user;
+      if (!user) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ data: null }));
+        return;
+      }
+      supabase.from('tracking_data').select('data').eq('user_id', user.id).single().then(function(r) {
+        var data = (r.data && r.data.data) || {};
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ data: data }));
+      });
+    });
+    return;
+  }
+
+  if (method === 'POST' && url.pathname === '/api/tracking/save') {
+    readBody(req).then(function(body) {
+      var data = JSON.parse(body);
+      var token = data.token || '';
+      var tracking = data.tracking || {};
+      if (!supabase || !token) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false }));
+        return;
+      }
+      supabase.auth.getUser(token).then(function(result) {
+        var user = result.data && result.data.user;
+        if (!user) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false }));
+          return;
+        }
+        supabase.from('tracking_data').upsert({ user_id: user.id, data: tracking, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }).then(function(r) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: !r.error }));
+        });
+      });
+    });
+    return;
+  }
+
   if (method === 'POST' && url.pathname === '/api/spotify-playlist') {
     readBody(req).then(async function(body) {
       var data = JSON.parse(body);
