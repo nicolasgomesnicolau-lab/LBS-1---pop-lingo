@@ -59,6 +59,10 @@ const Achievements = (() => {
     { id: 'cantor_chuveiro', title: 'Cantor de Chuveiro', desc: 'Complete um karaokê inteiro', icon: '🎵', category: 'Music', check: function(s) { return s.karaokeCompleted; } },
     { id: 'maratona_musical', title: 'Maratona Musical', desc: 'Estude músicas por 30 minutos em um dia', icon: '🎵', category: 'Music', check: function(s) { return s.musicMinutes30; } },
     { id: 'descobridor_hits', title: 'Descobridor de Hits', desc: 'Estude 10 artistas diferentes', icon: '🎵', category: 'Music', check: function(s) { return s.uniqueArtists >= 10; } },
+    { id: 'estudante_musical', title: 'Estudante Musical', desc: 'Complete o estudo de 1 música', icon: '🎵', category: 'Music', check: function(s) { return s.studiedSongsCount >= 1; } },
+    { id: 'dedicado_musical', title: 'Dedicado Musical', desc: 'Complete o estudo de 5 músicas', icon: '🎵', category: 'Music', check: function(s) { return s.studiedSongsCount >= 5; } },
+    { id: 'maestro', title: 'Maestro', desc: 'Complete o estudo de 10 músicas', icon: '🎵', category: 'Music', check: function(s) { return s.studiedSongsCount >= 10; } },
+    { id: 'perfeicao_musical', title: 'Perfeição Musical', desc: 'Acerte 100% em 3 músicas diferentes', icon: '🎵', category: 'Music', check: function(s) { return s.perfectSongCount >= 3; } },
     // 🎬 Movies
     { id: 'first_clip', title: 'Primeira Cena', desc: 'Assista 1 vídeo', icon: '🎬', category: 'Movies', check: function(s) { return s.clipCount >= 1; } },
     { id: 'five_clips', title: 'Cinéfilo', desc: '5 vídeos assistidos', icon: '🎬', category: 'Movies', check: function(s) { return s.clipCount >= 5; } },
@@ -281,6 +285,17 @@ const Achievements = (() => {
     }
     var uniqueArtists = Object.keys(artistSet).length;
 
+    // Song study results (from completing the lyric study session)
+    var songResults = (typeof Store !== 'undefined' && Store.getSongStudyResults) ? Store.getSongStudyResults() : {};
+    var studiedSongsCount = 0;
+    var perfectSongCount = 0;
+    for (var sr in songResults) {
+      if (songResults[sr] && songResults[sr].total > 0) {
+        studiedSongsCount++;
+        if (songResults[sr].score >= 100) perfectSongCount++;
+      }
+    }
+
     // Study time today
     var dailyStudyMs = track.dailyStudyTimeMs || {};
     var studyMsToday = dailyStudyMs[today] || 0;
@@ -382,6 +397,8 @@ const Achievements = (() => {
       uniqueArtists: uniqueArtists,
       musicMinutes30: musicMinutes30,
       karaokeCompleted: karaokeCompleted,
+      studiedSongsCount: studiedSongsCount,
+      perfectSongCount: perfectSongCount,
       studyHourToday: studyHourToday,
       study3HoursWeek: study3HoursWeek,
       daysInMonth: daysInMonth,
