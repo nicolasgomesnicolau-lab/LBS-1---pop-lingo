@@ -16,6 +16,7 @@ const StudyTab = (() => {
   let rankedMaxWrong = 2;
   let rankedWrongCount = 0;
   let rankedDefeated = false;
+  let rankedStyle = 'active'; // 'standard' (flip card) or 'active' (typing) — set by which ⚔️ was clicked
   let sessionStartTime = 0;
   let sessionStreak = 0;
   let sessionWrongWords = []; // words wrong in current session (for end-of-session review)
@@ -383,8 +384,10 @@ const StudyTab = (() => {
       rankedDefeated = false;
     }
 
+    var modeName = rankedStyle === 'standard' ? 'Padrão' : 'Ativo';
+
     if (currentWordIndex >= studyWords.length) {
-      return renderComplete('active', true);
+      return renderComplete(modeName, true);
     }
 
     var settings = Store.getSettings();
@@ -394,6 +397,38 @@ const StudyTab = (() => {
     var total = studyWords.length;
     var progress = (currentWordIndex / total) * 100;
     var lives = rankedMaxWrong - rankedWrongCount;
+
+    if (rankedStyle === 'standard') {
+      return `
+        <div class="study-session active">
+          <div class="study-session-header">
+            <div class="back-btn" data-study-back="main" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);cursor:pointer;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div class="progress-bar progress-bar-sm">
+                <div class="progress-bar-fill" style="width: ${progress}%"></div>
+              </div>
+            </div>
+            <span class="study-progress-info">❤️ ${lives} · ${currentWordIndex + 1}/${total}</span>
+          </div>
+
+          <div class="study-card-container">
+            <div style="width:100%;">
+              <div class="card" style="padding: var(--space-2xl); text-align: center; margin-bottom: var(--space-lg); border-color: rgba(255, 77, 106, 0.3);">
+                <span style="font-size:var(--font-sm);color:var(--error);margin-bottom:var(--space-sm);display:block">⚔️ Ranqueada (Padrão) — Round ${rankedRound}</span>
+                ${renderStandardCard(showWord, showAnswer)}
+              </div>
+
+              <div class="study-actions" style="visibility: ${isFlipped ? 'visible' : 'hidden'};">
+                <button class="btn study-btn-wrong" id="ranked-standard-wrong-btn">✗ Errei</button>
+                <button class="btn study-btn-correct" id="ranked-standard-correct-btn">✓ Acertei</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
 
     return `
       <div class="study-session active">
@@ -412,7 +447,7 @@ const StudyTab = (() => {
         <div class="study-card-container">
           <div style="width:100%;">
             <div class="card" style="padding: var(--space-2xl); text-align: center; margin-bottom: var(--space-lg); border-color: rgba(255, 77, 106, 0.3);">
-              <span style="font-size:var(--font-sm);color:var(--error);margin-bottom:var(--space-sm);display:block">⚔️ Ranqueada — Round ${rankedRound}</span>
+              <span style="font-size:var(--font-sm);color:var(--error);margin-bottom:var(--space-sm);display:block">⚔️ Ranqueada (Ativo) — Round ${rankedRound}</span>
               <span class="study-flashcard-word">${escapeHtml(showWord)}</span>
             </div>
 
@@ -704,12 +739,13 @@ const StudyTab = (() => {
       });
     });
 
-    // Ranked toggles — click ⚔️ starts ranked mode
+    // Ranked toggles — click ⚔️ starts ranked mode with correct style
     container.querySelectorAll('.mode-ranked-toggle').forEach(function(toggle) {
       toggle.addEventListener('click', function(e) {
         e.stopPropagation();
         resetSession();
         rankedDefeated = false;
+        rankedStyle = this.dataset.ranked || 'active';
         currentView = 'ranked';
         App.refreshCurrentTab();
       });
@@ -760,12 +796,14 @@ const StudyTab = (() => {
       });
     });
 
-    // Flashcard click (standard mode)
-    container.querySelector('#flashcard')?.addEventListener('click', function() {
-      if (!isFlipped) {
-        isFlipped = true;
-        App.refreshCurrentTab();
-      }
+    // Flashcard click (standard mode + ranked standard)
+    container.querySelectorAll('#flashcard').forEach(function(el) {
+      el.addEventListener('click', function() {
+        if (!isFlipped) {
+          isFlipped = true;
+          App.refreshCurrentTab();
+        }
+      });
     });
 
     // Standard mode buttons
@@ -809,6 +847,7 @@ const StudyTab = (() => {
         var mode = this.dataset.studyAgain;
         if (this.dataset.ranked) {
           resetSession();
+          rankedDefeated = false;
           currentView = 'ranked';
         } else if (mode === 'review') {
           resetSession();
@@ -837,6 +876,30 @@ const StudyTab = (() => {
       currentView = 'main';
       resetSession();
       rankedDefeated = false;
+      App.refreshCurrentTab();
+    });
+
+    // Ranked standard mode (flip card with lives)
+    container.querySelector('#ranked-standard-correct-btn')?.addEventListener('click', function() {
+      var word = studyWords[currentWordIndex];
+      recordStudyWord(word, true);
+      currentWordIndex++;
+      isFlipped = false;
+      App.refreshCurrentTab();
+    });
+
+    container.querySelector('#ranked-standard-wrong-btn')?.addEventListener('click', function() {
+      var word = studyWords[currentWordIndex];
+      recordStudyWord(word, false);
+      rankedWrongCount++;
+      isFlipped = false;
+      if (rankedWrongCount >= rankedMaxWrong) {
+        rankedDefeated = true;
+        App.refreshCurrentTab();
+        return;
+      }
+      sessionWrongWords.push(word);
+      currentWordIndex++;
       App.refreshCurrentTab();
     });
 
@@ -884,7 +947,7 @@ const StudyTab = (() => {
     var isCorrect = checkAnswer(userAnswer, expectedAnswer);
 
     // Ranked mode: track lives
-    if (currentView === 'ranked') {
+    if (currentView === 'ranked' && rankedStyle === 'active') {
       if (!isCorrect) {
         rankedWrongCount++;
         if (rankedWrongCount >= rankedMaxWrong) {
@@ -897,8 +960,8 @@ const StudyTab = (() => {
     }
 
     if (!isCorrect) {
-      // Track wrong words for end-of-session review (standard & active modes)
-      if (currentView !== 'review' && currentView !== 'ranked') {
+      // Track wrong words for end-of-session review
+      if (currentView !== 'review') {
         sessionWrongWords.push(word);
       }
       // Review mode: track for next round
