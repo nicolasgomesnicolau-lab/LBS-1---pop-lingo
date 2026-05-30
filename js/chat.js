@@ -89,50 +89,92 @@ const ChatTab = (() => {
       ' Salvar na biblioteca</button></div>';
   }
 
+  function appendMessage(role, html) {
+    var container = document.querySelector('.chat-messages');
+    if (!container) return;
+    var bubble = document.createElement('div');
+    bubble.className = 'chat-bubble ' + (role === 'user' ? 'chat-bubble-user' : 'chat-bubble-bot');
+    bubble.innerHTML = html;
+    container.appendChild(bubble);
+    scrollToBottom();
+  }
+
+  function removeLoading() {
+    var el = document.querySelector('.chat-loading');
+    if (el) el.remove();
+  }
+
+  function addLoading() {
+    var container = document.querySelector('.chat-messages');
+    if (!container) {
+      // First message — need full re-render to create chat-messages
+      return false;
+    }
+    var bubble = document.createElement('div');
+    bubble.className = 'chat-bubble chat-bubble-bot chat-loading';
+    bubble.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+    container.appendChild(bubble);
+    scrollToBottom();
+    return true;
+  }
+
   function sendMessage(text) {
     if (!text.trim() || isLoading) return;
     var clean = text.trim();
     messages.push({ role: 'user', content: clean });
     isLoading = true;
-    App.refreshCurrentTab();
-    scrollToBottom();
+
+    var container = document.querySelector('.chat-messages');
+    if (container) {
+      appendMessage('user', escapeHtml(clean));
+      var hasLoading = addLoading();
+      if (!hasLoading) {
+        App.refreshCurrentTab();
+        isLoading = false;
+        return;
+      }
+    } else {
+      var tabEl = document.getElementById('tab-chat');
+      tabEl.innerHTML = render();
+      bindEvents(tabEl);
+      container = document.querySelector('.chat-messages');
+      if (container) addLoading();
+    }
 
     var word = extractWordFromInput(clean);
     if (word) {
       Ai.translate(word, '').then(function(translation) {
         isLoading = false;
+        removeLoading();
         var isSame = word.toLowerCase() === translation.toLowerCase();
         var displayText = isSame
           ? '<em style="color:var(--text-muted)">Nao consegui traduzir "' + escapeHtml(word) + '". Tente uma frase completa.</em>'
           : renderTranslateResult(word, translation);
         messages.push({ role: 'assistant', content: displayText });
-        App.refreshCurrentTab();
-        scrollToBottom();
+        appendMessage('assistant', displayText);
+        bindSaveButtons();
       });
     } else {
       Ai.chat(messages).then(function(result) {
         isLoading = false;
-        if (result.error) {
-          messages.push({ role: 'assistant', content: 'Erro: ' + escapeHtml(result.error) });
-        } else {
-          var botText = result.text || '...';
-          var extraWord = extractWordFromInput(clean);
-          if (extraWord) {
-            var m = botText.match(/[""'']([^""'']+)[""'']/);
-            var extraTrans = m ? m[1] : null;
-            if (extraTrans && extraTrans.toLowerCase() !== extraWord.toLowerCase()) {
-              botText += '<br><br>' + renderTranslateResult(extraWord, extraTrans);
-            }
+        removeLoading();
+        var botText = result.error ? 'Erro: ' + escapeHtml(result.error) : (result.text || '...');
+        var extraWord = extractWordFromInput(clean);
+        if (extraWord && !result.error) {
+          var m = botText.match(/[""'']([^""'']+)[""'']/);
+          var extraTrans = m ? m[1] : null;
+          if (extraTrans && extraTrans.toLowerCase() !== extraWord.toLowerCase()) {
+            botText += '<br><br>' + renderTranslateResult(extraWord, extraTrans);
           }
-          messages.push({ role: 'assistant', content: botText });
         }
-        App.refreshCurrentTab();
-        scrollToBottom();
+        messages.push({ role: 'assistant', content: botText });
+        appendMessage('assistant', botText);
+        bindSaveButtons();
       }).catch(function() {
         isLoading = false;
+        removeLoading();
         messages.push({ role: 'assistant', content: 'Erro de conexao. Tente novamente.' });
-        App.refreshCurrentTab();
-        scrollToBottom();
+        appendMessage('assistant', 'Erro de conexao. Tente novamente.');
       });
     }
   }
@@ -142,6 +184,27 @@ const ChatTab = (() => {
       var el = document.querySelector('.chat-messages');
       if (el) el.scrollTop = el.scrollHeight;
     }, 50);
+  }
+
+  function bindSaveButtons() {
+    document.querySelectorAll('.chat-save-btn').forEach(function(btn) {
+      // Avoid double-binding
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', function() {
+        var word = this.getAttribute('data-save-word');
+        var translation = this.getAttribute('data-save-translation');
+        var result = Store.addWord(word, translation, 'chat');
+        if (result.success) {
+          App.showToast(result.message, 'success');
+          this.textContent = '✓ Salvo!';
+          this.disabled = true;
+          this.style.opacity = '0.5';
+        } else {
+          App.showToast(result.message, 'error');
+        }
+      });
+    });
   }
 
   function bindEvents(container) {
@@ -168,23 +231,7 @@ const ChatTab = (() => {
       });
     }
 
-    // Save buttons inside bot messages
-    container.querySelectorAll('.chat-save-btn').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var word = this.getAttribute('data-save-word');
-        var translation = this.getAttribute('data-save-translation');
-        var result = Store.addWord(word, translation, 'chat');
-        if (result.success) {
-          App.showToast(result.message, 'success');
-          this.textContent = '✓ Salvo!';
-          this.disabled = true;
-          this.style.opacity = '0.5';
-        } else {
-          App.showToast(result.message, 'error');
-        }
-      });
-    });
-
+    bindSaveButtons();
     scrollToBottom();
   }
 

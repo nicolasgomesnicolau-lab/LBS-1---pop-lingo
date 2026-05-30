@@ -118,10 +118,6 @@ const App = (() => {
       tabContainer.innerHTML = modules[currentTab].render();
       modules[currentTab].bindEvents(tabContainer);
       tabContainer.classList.add('active');
-      
-      // Scroll to top when refreshing/switching, unless in specific views where scroll state matters
-      // (This is basic behavior, can be refined per tab)
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 
