@@ -271,23 +271,13 @@ http.createServer((req, res) => {
       res.end(JSON.stringify({ error: 'Faltando query' }));
       return;
     }
-    fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&q=' + encodeURIComponent(q.trim()) + '&key=' + YT_API_KEY + '&type=video&maxResults=10')
-      .then(function(r) { return r.json(); })
-      .then(function(json) {
-        if (json.error) {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify([]));
-          return;
-        }
-        var results = (json.items || []).map(function(item) {
-          return { title: item.snippet.title, author: item.snippet.channelTitle, videoId: item.id.videoId, thumbnail: item.snippet.thumbnails.default ? item.snippet.thumbnails.default.url : '' };
-        });
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(results));
-      }).catch(function() {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify([]));
-      });
+    searchYouTube(q.trim()).then(function(videos) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(videos));
+    }).catch(function(err) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify([]));
+    });
     return;
   }
 
