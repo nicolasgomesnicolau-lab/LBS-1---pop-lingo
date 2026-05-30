@@ -564,7 +564,12 @@ const MusicTab = (() => {
       playlistHtml = '<div class="music-section"><div class="section-header"><h2>playlist</h2><span class="text-muted" style="font-size:var(--font-sm)">' + playlist.length + '</span></div><div class="music-results">';
       for (var i = 0; i < playlist.length; i++) {
         var s = playlist[i];
-        playlistHtml += '<div class="music-result-item" data-action="play" data-title="' + escapeHtml(s.title) + '" data-artist="' + escapeHtml(s.artist) + '" data-videoid="' + escapeHtml(s.videoId) + '"><div class="music-result-cover"><img src="https://img.youtube.com/vi/' + s.videoId + '/mqdefault.jpg" alt="" loading="lazy" onerror="this.parentElement.innerHTML=\'<span style=font-size:24px;display:flex;align-items:center;justify-content:center;height:100%>🎵</span>\'"></div><div class="music-result-info"><h4>' + escapeHtml(s.title) + '</h4><p>' + escapeHtml(s.artist) + '</p></div><button class="btn btn-danger btn-sm" data-action="playlist-remove" style="flex-shrink:0">✕</button></div>';
+        var studyScore = (typeof Store !== 'undefined' && Store.getSongStudyScore) ? Store.getSongStudyScore(s.title, s.artist) : null;
+        var badgeHtml = '';
+        if (studyScore) {
+          badgeHtml = '<span class="badge ' + (studyScore.score >= 100 ? 'badge-success' : 'badge-warning') + '" style="font-size:10px;margin-left:6px">' + studyScore.score + '%</span>';
+        }
+        playlistHtml += '<div class="music-result-item" data-action="play" data-title="' + escapeHtml(s.title) + '" data-artist="' + escapeHtml(s.artist) + '" data-videoid="' + escapeHtml(s.videoId) + '"><div class="music-result-cover"><img src="https://img.youtube.com/vi/' + s.videoId + '/mqdefault.jpg" alt="" loading="lazy" onerror="this.parentElement.innerHTML=\'<span style=font-size:24px;display:flex;align-items:center;justify-content:center;height:100%>🎵</span>\'"></div><div class="music-result-info"><h4>' + escapeHtml(s.title) + badgeHtml + '</h4><p>' + escapeHtml(s.artist) + '</p></div><button class="btn btn-danger btn-sm" data-action="playlist-remove" style="flex-shrink:0">✕</button></div>';
       }
       playlistHtml += '</div></div>';
     }
@@ -928,7 +933,11 @@ const MusicTab = (() => {
         App.showToast('Traduzindo ' + uniqueWords.length + ' palavras...', 'info');
         musicTranslateWordList(uniqueWords, function(translated) {
           if (typeof StudyTab !== 'undefined' && StudyTab.startMediaSession) {
-            StudyTab.startMediaSession(translated, 'standard');
+            StudyTab.startMediaSession(translated, 'standard', function(result) {
+              if (typeof Store !== 'undefined' && Store.recordSongStudyResult) {
+                Store.recordSongStudyResult(currentSong.title, currentSong.artist, result.correct, result.total);
+              }
+            });
           }
         });
       });

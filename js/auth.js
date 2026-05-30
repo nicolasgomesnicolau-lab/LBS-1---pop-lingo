@@ -76,6 +76,9 @@ const Auth = (() => {
     if (typeof Achievements !== 'undefined' && Achievements.fetchFromServer) {
       Achievements.fetchFromServer();
     }
+    if (typeof Store !== 'undefined' && Store.fetchTrackingFromServer) {
+      Store.fetchTrackingFromServer();
+    }
   }
 
   // Full-screen login page — returns promise resolving with true (logged in) or false (guest)

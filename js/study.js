@@ -20,6 +20,7 @@ const StudyTab = (() => {
   let sessionStartTime = 0;
   let sessionStreak = 0;
   let sessionWrongWords = []; // words wrong in current session (for end-of-session review)
+  let mediaSessionCallback = null; // called when media study session completes
 
   // Review tracking
   let reviewWords = [];     // words that were wrong
@@ -538,6 +539,12 @@ const StudyTab = (() => {
     var percentage = total > 0 ? Math.round((sessionCorrect / total) * 100) : 0;
     var hasWrongWords = sessionWrongWords.length > 0;
 
+    // Fire media session callback if set
+    if (mediaSessionCallback) {
+      mediaSessionCallback({ correct: sessionCorrect, wrong: sessionWrong, total: total });
+      mediaSessionCallback = null;
+    }
+
     return `
       <div class="study-session active">
         <div class="study-complete">
@@ -1039,8 +1046,9 @@ const StudyTab = (() => {
   }
 
   // Start a session with external words (from movies/music media)
-  function startMediaSession(words, mode) {
+  function startMediaSession(words, mode, onComplete) {
     if (!words || words.length === 0) return;
+    mediaSessionCallback = onComplete || null;
     studyWords = words;
     currentView = mode || 'standard';
     currentWordIndex = 0;

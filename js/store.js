@@ -11,6 +11,7 @@ const Store = (() => {
     SETTINGS: 'lbs_settings',
     PLAYLIST: 'lbs_playlist',
     ACHIEVEMENT_TRACK: 'lbs_achievement_track',
+    SONG_STUDY_RESULTS: 'lbs_song_study_results',
   };
 
   // ---- Helpers ----
@@ -222,6 +223,25 @@ const Store = (() => {
     }
   }
 
+  // ---- Song Study Results ----
+  function getSongStudyResults() {
+    return get(KEYS.SONG_STUDY_RESULTS) || {};
+  }
+
+  function recordSongStudyResult(title, artist, correct, total) {
+    var key = (title + '|' + artist).toLowerCase();
+    var results = getSongStudyResults();
+    results[key] = { correct: correct, total: total, score: total > 0 ? Math.round(correct / total * 100) : 0, date: new Date().toISOString() };
+    set(KEYS.SONG_STUDY_RESULTS, results);
+    syncTrackingToServer();
+  }
+
+  function getSongStudyScore(title, artist) {
+    var key = (title + '|' + artist).toLowerCase();
+    var results = getSongStudyResults();
+    return results[key] || null;
+  }
+
   // ---- Study Stats ----
   function getStudyStats() {
     return get(KEYS.STUDY_STATS) || {
@@ -346,6 +366,7 @@ const Store = (() => {
 
   function saveTrack(t) {
     set(KEYS.ACHIEVEMENT_TRACK, t);
+    syncTrackingToServer();
   }
 
   function recordTabVisit(tabId) {
@@ -463,6 +484,34 @@ const Store = (() => {
     }).catch(function() {});
   }
 
+  // ---- Tracking Data Sync ----
+  function fetchTrackingFromServer() {
+    return new Promise(function(resolve) {
+      var token = getAuthToken();
+      if (!token) { resolve(null); return; }
+      fetch('/api/tracking', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      }).then(function(r) { return r.json(); }).then(function(json) {
+        if (json.data && Object.keys(json.data).length > 0) {
+          // Merge server tracking into local (server wins for multi-device)
+          set(KEYS.ACHIEVEMENT_TRACK, json.data);
+        }
+        resolve(json.data);
+      }).catch(function() { resolve(null); });
+    });
+  }
+
+  function syncTrackingToServer() {
+    var token = getAuthToken();
+    if (!token) return;
+    var track = getTrack();
+    fetch('/api/tracking/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, tracking: track })
+    }).catch(function() {});
+  }
+
   // ---- Public API ----
   return {
     getWords,
@@ -483,6 +532,9 @@ const Store = (() => {
     getMusicHistory,
     addMusicHistory,
     updateMusicProgress,
+    getSongStudyResults,
+    recordSongStudyResult,
+    getSongStudyScore,
 
     getStudyStats,
     recordStudyResult,
@@ -499,6 +551,8 @@ const Store = (() => {
     generateId,
     fetchVocabFromServer,
     syncVocabToServer,
+    fetchTrackingFromServer,
+    syncTrackingToServer,
 
     // Achievement tracking
     getTrack,
