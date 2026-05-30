@@ -3,7 +3,7 @@
    ======================================== */
 
 const StudyTab = (() => {
-  let currentView = 'main'; // main | standard | active | basic | lesson
+  let currentView = 'main'; // main | standard | active | basic | lesson | review | ranked
   let currentLessonIndex = -1;
   let studyWords = [];
   let currentWordIndex = 0;
@@ -12,6 +12,17 @@ const StudyTab = (() => {
   let sessionWrong = 0;
   let activeFeedback = null;
   let periodDays = 3;
+  let rankedRound = 1;
+  let rankedMaxWrong = 2;
+  let rankedWrongCount = 0;
+  let rankedDefeated = false;
+  let sessionStartTime = 0;
+  let sessionStreak = 0;
+
+  // Review tracking
+  let reviewWords = [];     // words that were wrong
+  let reviewRound = 1;      // current review round
+  let reviewSessionWrong = []; // words wrong in current review
 
   const lessons = [
     { emoji: '🔗', title: 'Phrasal Verbs — Básico', desc: 'Palavras juntas mudam o sentido' },
@@ -27,8 +38,10 @@ const StudyTab = (() => {
 
   function render() {
     switch (currentView) {
-      case 'standard': return renderSession('standard');
-      case 'active': return renderSession('active');
+      case 'standard': return renderSession('standard', false);
+      case 'active': return renderSession('active', false);
+      case 'review': return renderReview();
+      case 'ranked': return renderRanked();
       case 'basic': return renderBasicLearning();
       case 'lesson': return renderLessonDetail();
       default: return renderMain();
@@ -42,6 +55,11 @@ const StudyTab = (() => {
     const goalProgress = Math.min((todayStats.wordsStudied / 10) * 100, 100);
     const wordCount = Store.getWords().length;
 
+    // Check if there are words with errors to review
+    var words = Store.getWords();
+    var wrongWords = words.filter(function(w) { return w.timesWrong > w.timesCorrect; });
+    var hasReview = wrongWords.length > 0;
+
     return `
       <div class="tab-header">
         <div class="tab-header-icon">📖</div>
@@ -51,7 +69,6 @@ const StudyTab = (() => {
         </div>
       </div>
 
-      <!-- Daily Goal -->
       <div class="study-daily-goal">
         <div class="card">
           <div class="study-goal-header">
@@ -86,7 +103,6 @@ const StudyTab = (() => {
         </div>
       </div>
 
-      <!-- Period -->
       <div class="study-period">
         <div class="card" style="padding: var(--space-base) var(--space-lg);">
           <div class="flex-between">
@@ -106,7 +122,6 @@ const StudyTab = (() => {
         </div>
       </div>
 
-      <!-- Direction Toggle -->
       <div class="study-direction mb-lg">
         <span class="study-direction-label">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
@@ -118,7 +133,6 @@ const StudyTab = (() => {
         </div>
       </div>
 
-      <!-- Study Modes -->
       <div class="study-modes-label">✨ Toque para começar</div>
 
       <div class="mode-card" data-mode="standard">
@@ -135,6 +149,26 @@ const StudyTab = (() => {
         <div class="mode-card-info">
           <h3>Modo Ativo</h3>
           <p>Digite a tradução correta</p>
+        </div>
+        <span class="mode-card-arrow">→</span>
+      </div>
+
+      ${hasReview ? `
+      <div class="mode-card" data-mode="review" style="border-color: rgba(245, 158, 11, 0.3);">
+        <div class="mode-card-icon" style="background: rgba(245, 158, 11, 0.15);">🔄</div>
+        <div class="mode-card-info">
+          <h3 style="color: var(--warning);">Revisão <span class="badge badge-warning" style="font-size:10px">${wrongWords.length} pendentes</span></h3>
+          <p>Revise as palavras que você errou</p>
+        </div>
+        <span class="mode-card-arrow">→</span>
+      </div>
+      ` : ''}
+
+      <div class="mode-card" data-mode="ranked">
+        <div class="mode-card-icon" style="background: rgba(255, 77, 106, 0.15);">⚔️</div>
+        <div class="mode-card-info">
+          <h3 style="color: var(--error);">Modo Ranqueado</h3>
+          <p>Errou? Volta ao início! 🔥</p>
         </div>
         <span class="mode-card-arrow">→</span>
       </div>
@@ -157,28 +191,13 @@ const StudyTab = (() => {
     `;
   }
 
-  function renderSession(mode) {
+  function renderSession(mode, isRanked) {
     const words = Store.getWords();
     if (words.length === 0) {
-      return `
-        <div class="study-session active">
-          <div class="study-session-header">
-            <div class="back-btn" id="study-back-btn" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);cursor:pointer;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-            </div>
-            <h2 style="font-size: var(--font-lg); font-weight: 700;">${mode === 'standard' ? 'Modo Padrão' : 'Modo Ativo'}</h2>
-          </div>
-          <div class="empty-state">
-            <div class="empty-state-icon">📭</div>
-            <h3>Sem palavras para estudar</h3>
-            <p>Adicione palavras na aba Vocab primeiro!</p>
-          </div>
-        </div>
-      `;
+      return emptySession(mode === 'ranked' ? 'Modo Ranqueado' : (mode === 'standard' ? 'Modo Padrão' : 'Modo Ativo'));
     }
 
     if (studyWords.length === 0) {
-      // Shuffle and pick words
       studyWords = [...words].sort(() => Math.random() - 0.5).slice(0, 20);
       currentWordIndex = 0;
       sessionCorrect = 0;
@@ -187,9 +206,8 @@ const StudyTab = (() => {
       activeFeedback = null;
     }
 
-    // Check if session complete
     if (currentWordIndex >= studyWords.length) {
-      return renderComplete();
+      return renderComplete(mode, isRanked);
     }
 
     const settings = Store.getSettings();
@@ -199,10 +217,12 @@ const StudyTab = (() => {
     const total = studyWords.length;
     const progress = ((currentWordIndex) / total) * 100;
 
+    var backFn = isRanked ? 'ranked' : mode;
+
     return `
       <div class="study-session active">
         <div class="study-session-header">
-          <div class="back-btn" id="study-back-btn" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);cursor:pointer;">
+          <div class="back-btn" data-study-back="${backFn}" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);cursor:pointer;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           </div>
           <div style="flex:1;">
@@ -218,6 +238,24 @@ const StudyTab = (() => {
         </div>
 
         ${mode === 'standard' ? renderStandardActions() : ''}
+      </div>
+    `;
+  }
+
+  function emptySession(title) {
+    return `
+      <div class="study-session active">
+        <div class="study-session-header">
+          <div class="back-btn" data-study-back="main" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);cursor:pointer;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </div>
+          <h2 style="font-size: var(--font-lg); font-weight: 700;">${title}</h2>
+        </div>
+        <div class="empty-state">
+          <div class="empty-state-icon">📭</div>
+          <h3>Sem palavras para estudar</h3>
+          <p>Adicione palavras na aba Vocab primeiro!</p>
+        </div>
       </div>
     `;
   }
@@ -271,9 +309,183 @@ const StudyTab = (() => {
     `;
   }
 
-  function renderComplete() {
-    const total = sessionCorrect + sessionWrong;
-    const percentage = total > 0 ? Math.round((sessionCorrect / total) * 100) : 0;
+  // --- REVIEW MODE ---
+  function renderReview() {
+    if (reviewWords.length === 0) {
+      var words = Store.getWords();
+      reviewWords = words.filter(function(w) { return w.timesWrong > w.timesCorrect; });
+      reviewRound = 1;
+      reviewSessionWrong = [];
+      if (reviewWords.length === 0) {
+        currentView = 'main';
+        return render();
+      }
+    }
+
+    if (currentWordIndex >= reviewWords.length) {
+      if (reviewSessionWrong.length === 0) {
+        var completed = renderComplete('review', false);
+        reviewWords = [];
+        return completed;
+      }
+      reviewRound++;
+      reviewWords = reviewSessionWrong;
+      reviewSessionWrong = [];
+      currentWordIndex = 0;
+      sessionCorrect = 0;
+      sessionWrong = 0;
+    }
+
+    var settings = Store.getSettings();
+    var word = reviewWords[currentWordIndex];
+    var showWord = settings.studyDirection === 'en-pt' ? word.word : word.translation;
+    var showAnswer = settings.studyDirection === 'en-pt' ? word.translation : word.word;
+    var total = reviewWords.length;
+    var progress = (currentWordIndex / total) * 100;
+
+    return `
+      <div class="study-session active">
+        <div class="study-session-header">
+          <div class="back-btn" data-study-back="main" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);cursor:pointer;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div class="progress-bar progress-bar-sm">
+              <div class="progress-bar-fill" style="width: ${progress}%"></div>
+            </div>
+          </div>
+          <span class="study-progress-info">Revisão R${reviewRound} · ${currentWordIndex + 1}/${total}</span>
+        </div>
+
+        <div class="study-card-container">
+          <div style="width:100%;">
+            <div class="card" style="padding: var(--space-2xl); text-align: center; margin-bottom: var(--space-lg); border-color: rgba(245, 158, 11, 0.3);">
+              <span style="font-size:var(--font-sm);color:var(--warning);margin-bottom:var(--space-sm);display:block">🔄 Revisão — já errou esta palavra antes</span>
+              <span class="study-flashcard-word">${escapeHtml(showWord)}</span>
+            </div>
+
+            <div class="study-input-area">
+              <input type="text" class="input-field" id="active-input" placeholder="Digite a tradução..." autocomplete="off" ${activeFeedback ? 'disabled' : ''}>
+              
+              ${activeFeedback ? `
+                <div class="study-feedback ${activeFeedback.correct ? 'correct' : 'wrong'}">
+                  ${activeFeedback.correct ? '✅ Correto! Recuperou!' : `❌ Resposta: <strong>${escapeHtml(showAnswer)}</strong>`}
+                </div>
+                <button class="btn btn-primary btn-block mt-lg" id="active-next-btn">Próxima →</button>
+              ` : `
+                <button class="btn btn-primary btn-block mt-base" id="active-submit-btn">Verificar</button>
+              `}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // --- RANKED MODE ---
+  function renderRanked() {
+    if (rankedDefeated) {
+      return renderRankedDefeat();
+    }
+
+    var words = Store.getWords();
+    if (words.length === 0) return emptySession('Modo Ranqueado');
+
+    if (studyWords.length === 0) {
+      studyWords = [...words].sort(() => Math.random() - 0.5).slice(0, 20);
+      currentWordIndex = 0;
+      sessionCorrect = 0;
+      sessionWrong = 0;
+      rankedRound = 1;
+      rankedWrongCount = 0;
+      rankedDefeated = false;
+    }
+
+    if (currentWordIndex >= studyWords.length) {
+      return renderComplete('active', true);
+    }
+
+    var settings = Store.getSettings();
+    var word = studyWords[currentWordIndex];
+    var showWord = settings.studyDirection === 'en-pt' ? word.word : word.translation;
+    var showAnswer = settings.studyDirection === 'en-pt' ? word.translation : word.word;
+    var total = studyWords.length;
+    var progress = (currentWordIndex / total) * 100;
+    var lives = rankedMaxWrong - rankedWrongCount;
+
+    return `
+      <div class="study-session active">
+        <div class="study-session-header">
+          <div class="back-btn" data-study-back="main" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);cursor:pointer;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div class="progress-bar progress-bar-sm">
+              <div class="progress-bar-fill" style="width: ${progress}%"></div>
+            </div>
+          </div>
+          <span class="study-progress-info">❤️ ${lives} · ${currentWordIndex + 1}/${total}</span>
+        </div>
+
+        <div class="study-card-container">
+          <div style="width:100%;">
+            <div class="card" style="padding: var(--space-2xl); text-align: center; margin-bottom: var(--space-lg); border-color: rgba(255, 77, 106, 0.3);">
+              <span style="font-size:var(--font-sm);color:var(--error);margin-bottom:var(--space-sm);display:block">⚔️ Ranqueada — Round ${rankedRound}</span>
+              <span class="study-flashcard-word">${escapeHtml(showWord)}</span>
+            </div>
+
+            <div class="study-input-area">
+              <input type="text" class="input-field" id="active-input" placeholder="Digite a tradução..." autocomplete="off" ${activeFeedback ? 'disabled' : ''}>
+              
+              ${activeFeedback ? `
+                <div class="study-feedback ${activeFeedback.correct ? 'correct' : 'wrong'}">
+                  ${activeFeedback.correct ? '✅ Correto!' : `❌ Resposta: <strong>${escapeHtml(showAnswer)}</strong>`}
+                </div>
+                <button class="btn btn-primary btn-block mt-lg" id="active-next-btn">Próxima →</button>
+              ` : `
+                <button class="btn btn-primary btn-block mt-base" id="active-submit-btn">Verificar</button>
+              `}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderRankedDefeat() {
+    var total = sessionCorrect + sessionWrong;
+    return `
+      <div class="study-session active">
+        <div class="study-complete" style="padding-top:60px">
+          <div style="font-size:80px;margin-bottom:var(--space-lg)">💀</div>
+          <h2 style="font-size:var(--font-3xl);color:var(--error);font-weight:900">DERROTA!</h2>
+          <p style="color:var(--text-muted);font-size:var(--font-lg);margin-bottom:var(--space-xl)">Você errou ${rankedWrongCount} vez(es) e foi eliminado!</p>
+          
+          <div class="study-complete-stats" style="margin-bottom:var(--space-xl)">
+            <div class="stat-item">
+              <span class="stat-value" style="color: var(--accent);">${sessionCorrect}</span>
+              <span class="stat-label">acertos</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" style="color: var(--error);">${sessionWrong}</span>
+              <span class="stat-label">erros</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">Round ${rankedRound}</span>
+              <span class="stat-label">rodada</span>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-lg" id="ranked-retry-btn">🔄 Tentar Novamente</button>
+          <button class="btn btn-secondary btn-lg mt-base" id="study-back-main-btn">Voltar</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderComplete(mode, isRanked) {
+    var total = sessionCorrect + sessionWrong;
+    var percentage = total > 0 ? Math.round((sessionCorrect / total) * 100) : 0;
 
     return `
       <div class="study-session active">
@@ -297,7 +509,14 @@ const StudyTab = (() => {
             </div>
           </div>
 
-          <button class="btn btn-primary btn-lg" id="study-again-btn">Estudar novamente</button>
+          ${mode === 'review' && reviewSessionWrong.length > 0 ? `
+            <div class="info-banner mb-lg">
+              <span>🔄</span>
+              <span>${reviewSessionWrong.length} palavra(s) ainda precisam de revisão na próxima rodada</span>
+            </div>
+          ` : ''}
+
+          <button class="btn btn-primary btn-lg" data-study-again="${mode}" ${isRanked ? 'data-ranked="1"' : ''}>Estudar novamente</button>
           <button class="btn btn-secondary btn-lg mt-base" id="study-back-main-btn">Voltar</button>
         </div>
       </div>
@@ -308,14 +527,14 @@ const StudyTab = (() => {
     return `
       <div class="study-session active">
         <div class="study-session-header">
-          <div class="back-btn" id="study-back-btn" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);cursor:pointer;">
+          <div class="back-btn" data-study-back="main" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);cursor:pointer;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           </div>
           <h2 style="font-size: var(--font-lg); font-weight: 700;">Aprendizado Básico</h2>
         </div>
 
         <div class="lesson-list stagger">
-          ${lessons.map((lesson, i) => `
+          ${lessons.map(function(lesson, i) { return `
             <div class="lesson-card anim-slide-up" data-lesson="${i}" style="animation-delay: ${i * 50}ms;">
               <span class="lesson-emoji">${lesson.emoji}</span>
               <div class="lesson-info">
@@ -324,7 +543,7 @@ const StudyTab = (() => {
               </div>
               <span class="mode-card-arrow" style="color: var(--text-muted);">→</span>
             </div>
-          `).join('')}
+          `; }).join('')}
         </div>
 
         <button class="btn btn-outline btn-block mt-xl" id="ask-chat-btn">
@@ -335,7 +554,7 @@ const StudyTab = (() => {
   }
 
   function renderLessonDetail() {
-    const lesson = lessons[currentLessonIndex];
+    var lesson = lessons[currentLessonIndex];
     if (!lesson) return renderBasicLearning();
 
     return `
@@ -367,27 +586,51 @@ const StudyTab = (() => {
       case 3: return 'Últimos 3 dias';
       case 7: return 'Última semana';
       case 30: return 'Último mês';
-      default: return `Últimos ${days} dias`;
+      default: return 'Últimos ${days} dias';
     }
   }
 
+  // ---- Soft matching ----
   function normalizeText(text) {
-    return text
-      .toLowerCase()
-      .trim()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove accents
-      .replace(/[^a-z0-9\s]/g, '');     // Remove special chars
+    return text.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '');
+  }
+
+  function isSimilarEnough(input, expected) {
+    var a = normalizeText(input);
+    var b = normalizeText(expected);
+    if (a === b) return true;
+    // Check if one contains the other (e.g., "abraço" ≈ "abraçar")
+    if (a.length >= 4 && b.length >= 4 && (a.includes(b) || b.includes(a))) return true;
+    // Levenshtein for short words
+    if (a.length <= 8 && b.length <= 8) {
+      var dist = levenshtein(a, b);
+      if (dist <= 1) return true;
+      if (dist <= 2 && a.length >= 5) return true;
+    }
+    return false;
+  }
+
+  function levenshtein(a, b) {
+    var m = a.length, n = b.length;
+    var dp = [];
+    for (var i = 0; i <= m; i++) { dp[i] = [i]; }
+    for (var j = 0; j <= n; j++) { dp[0][j] = j; }
+    for (var i = 1; i <= m; i++) {
+      for (var j = 1; j <= n; j++) {
+        dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : Math.min(dp[i-1][j-1], dp[i][j-1], dp[i-1][j]) + 1;
+      }
+    }
+    return dp[m][n];
   }
 
   function checkAnswer(input, expected) {
-    return normalizeText(input) === normalizeText(expected);
+    return isSimilarEnough(input, expected);
   }
 
   function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
   }
 
   function resetSession() {
@@ -397,16 +640,57 @@ const StudyTab = (() => {
     sessionCorrect = 0;
     sessionWrong = 0;
     activeFeedback = null;
+    rankedDefeated = false;
+    rankedWrongCount = 0;
+    rankedRound = 1;
+    sessionStartTime = Date.now();
+    sessionStreak = 0;
+  }
+
+  function recordStudyWord(word, isCorrect) {
+    Store.updateWordStats(word.id, isCorrect);
+    Store.recordStudyResult(isCorrect);
+    if (isCorrect) {
+      sessionCorrect++;
+      sessionStreak++;
+      if (typeof Store !== 'undefined' && Store.recordCorrectStreak) {
+        Store.recordCorrectStreak(sessionStreak);
+      }
+    } else {
+      sessionWrong++;
+      sessionStreak = 0;
+    }
+
+    // Check lightning study: all words done in under 2 minutes
+    if (currentWordIndex === studyWords.length - 1 || currentWordIndex === reviewWords.length - 1) {
+      var elapsed = (Date.now() - sessionStartTime) / 1000;
+      if (elapsed < 120 && typeof Store !== 'undefined' && Store.recordLightningStudy) {
+        Store.recordLightningStudy();
+      }
+    }
+
+    if (typeof Achievements !== 'undefined') {
+      Achievements.checkAll(Achievements.getState());
+    }
   }
 
   // ---- Events ----
   function bindEvents(container) {
     // Mode selection
-    container.querySelectorAll('[data-mode]').forEach(card => {
-      card.addEventListener('click', () => {
-        const mode = card.dataset.mode;
+    container.querySelectorAll('[data-mode]').forEach(function(card) {
+      card.addEventListener('click', function() {
+        var mode = this.dataset.mode;
         if (mode === 'basic') {
           currentView = 'basic';
+        } else if (mode === 'review') {
+          resetSession();
+          reviewWords = [];
+          reviewRound = 1;
+          reviewSessionWrong = [];
+          currentView = 'review';
+        } else if (mode === 'ranked') {
+          resetSession();
+          currentView = 'ranked';
         } else {
           resetSession();
           currentView = mode;
@@ -416,44 +700,52 @@ const StudyTab = (() => {
     });
 
     // Direction toggle
-    container.querySelectorAll('[data-direction]').forEach(chip => {
-      chip.addEventListener('click', () => {
-        Store.updateSettings({ studyDirection: chip.dataset.direction });
+    container.querySelectorAll('[data-direction]').forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        Store.updateSettings({ studyDirection: this.dataset.direction });
         App.refreshCurrentTab();
       });
     });
 
     // Period dropdown
-    const periodTrigger = container.querySelector('#period-trigger');
-    const periodMenu = container.querySelector('#period-menu');
+    var periodTrigger = container.querySelector('#period-trigger');
+    var periodMenu = container.querySelector('#period-menu');
     if (periodTrigger && periodMenu) {
-      periodTrigger.addEventListener('click', () => {
+      periodTrigger.addEventListener('click', function() {
         periodMenu.classList.toggle('open');
       });
-      container.querySelectorAll('[data-period]').forEach(item => {
-        item.addEventListener('click', () => {
-          periodDays = parseInt(item.dataset.period);
+      container.querySelectorAll('[data-period]').forEach(function(item) {
+        item.addEventListener('click', function() {
+          periodDays = parseInt(this.dataset.period);
           periodMenu.classList.remove('open');
           App.refreshCurrentTab();
         });
       });
-      // Close on outside click
-      document.addEventListener('click', (e) => {
+      document.addEventListener('click', function(e) {
         if (!e.target.closest('#period-dropdown')) {
-          periodMenu?.classList.remove('open');
+          if (periodMenu) periodMenu.classList.remove('open');
         }
       });
     }
 
-    // Back button
-    container.querySelector('#study-back-btn')?.addEventListener('click', () => {
-      currentView = 'main';
-      resetSession();
-      App.refreshCurrentTab();
+    // Back button — data-study-back attribute
+    container.querySelectorAll('[data-study-back]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var dest = this.dataset.studyBack;
+        if (dest === 'ranked' && rankedDefeated) { rankedDefeated = false; }
+        if (dest === 'main' || dest === 'ranked') {
+          currentView = dest === 'main' ? 'main' : 'ranked';
+          resetSession();
+        } else {
+          currentView = 'main';
+          resetSession();
+        }
+        App.refreshCurrentTab();
+      });
     });
 
     // Flashcard click (standard mode)
-    container.querySelector('#flashcard')?.addEventListener('click', () => {
+    container.querySelector('#flashcard')?.addEventListener('click', function() {
       if (!isFlipped) {
         isFlipped = true;
         App.refreshCurrentTab();
@@ -461,100 +753,144 @@ const StudyTab = (() => {
     });
 
     // Standard mode buttons
-    container.querySelector('#study-correct-btn')?.addEventListener('click', () => {
-      const word = studyWords[currentWordIndex];
-      Store.updateWordStats(word.id, true);
-      Store.recordStudyResult(true);
-      sessionCorrect++;
+    container.querySelector('#study-correct-btn')?.addEventListener('click', function() {
+      var word = studyWords[currentWordIndex];
+      recordStudyWord(word, true);
       currentWordIndex++;
       isFlipped = false;
       App.refreshCurrentTab();
     });
 
-    container.querySelector('#study-wrong-btn')?.addEventListener('click', () => {
-      const word = studyWords[currentWordIndex];
-      Store.updateWordStats(word.id, false);
-      Store.recordStudyResult(false);
-      sessionWrong++;
+    container.querySelector('#study-wrong-btn')?.addEventListener('click', function() {
+      var word = studyWords[currentWordIndex];
+      recordStudyWord(word, false);
       currentWordIndex++;
       isFlipped = false;
       App.refreshCurrentTab();
     });
 
-    // Active mode
-    const activeInput = container.querySelector('#active-input');
+    // Active mode submit
+    var activeInput = container.querySelector('#active-input');
     if (activeInput && !activeFeedback) {
-      setTimeout(() => activeInput.focus(), 100);
-      activeInput.addEventListener('keydown', (e) => {
+      setTimeout(function() { activeInput.focus(); }, 100);
+      activeInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') handleActiveSubmit();
       });
     }
 
     container.querySelector('#active-submit-btn')?.addEventListener('click', handleActiveSubmit);
 
-    container.querySelector('#active-next-btn')?.addEventListener('click', () => {
+    container.querySelector('#active-next-btn')?.addEventListener('click', function() {
       activeFeedback = null;
       currentWordIndex++;
       App.refreshCurrentTab();
     });
 
     // Complete screen
-    container.querySelector('#study-again-btn')?.addEventListener('click', () => {
+    container.querySelectorAll('[data-study-again]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var mode = this.dataset.studyAgain;
+        if (this.dataset.ranked) {
+          resetSession();
+          currentView = 'ranked';
+        } else if (mode === 'review') {
+          resetSession();
+          reviewWords = [];
+          reviewRound = 1;
+          reviewSessionWrong = [];
+          currentView = 'review';
+        } else {
+          resetSession();
+          currentView = mode;
+        }
+        App.refreshCurrentTab();
+      });
+    });
+
+    container.querySelector('#study-back-main-btn')?.addEventListener('click', function() {
+      currentView = 'main';
       resetSession();
+      rankedDefeated = false;
       App.refreshCurrentTab();
     });
 
-    container.querySelector('#study-back-main-btn')?.addEventListener('click', () => {
-      currentView = 'main';
+    // Ranked retry
+    container.querySelector('#ranked-retry-btn')?.addEventListener('click', function() {
       resetSession();
+      rankedDefeated = false;
+      currentView = 'ranked';
       App.refreshCurrentTab();
     });
 
     // Lessons
-    container.querySelectorAll('[data-lesson]').forEach(card => {
-      card.addEventListener('click', () => {
-        currentLessonIndex = parseInt(card.dataset.lesson);
+    container.querySelectorAll('[data-lesson]').forEach(function(card) {
+      card.addEventListener('click', function() {
+        currentLessonIndex = parseInt(this.dataset.lesson);
         currentView = 'lesson';
         App.refreshCurrentTab();
       });
     });
 
-    container.querySelector('#lesson-back-btn')?.addEventListener('click', () => {
+    container.querySelector('#lesson-back-btn')?.addEventListener('click', function() {
       currentView = 'basic';
       App.refreshCurrentTab();
     });
 
     // Chat buttons
-    container.querySelector('#ask-chat-btn')?.addEventListener('click', () => {
+    container.querySelector('#ask-chat-btn')?.addEventListener('click', function() {
       App.switchTab('chat');
     });
-    container.querySelector('#ask-chat-lesson-btn')?.addEventListener('click', () => {
+    container.querySelector('#ask-chat-lesson-btn')?.addEventListener('click', function() {
       App.switchTab('chat');
     });
   }
 
   function handleActiveSubmit() {
-    const input = document.querySelector('#active-input');
+    var input = document.querySelector('#active-input');
     if (!input) return;
-
-    const userAnswer = input.value.trim();
+    var userAnswer = input.value.trim();
     if (!userAnswer) return;
 
-    const settings = Store.getSettings();
-    const word = studyWords[currentWordIndex];
-    const expectedAnswer = settings.studyDirection === 'en-pt' ? word.translation : word.word;
+    var settings = Store.getSettings();
+    var word = getCurrentWord();
+    if (!word) return;
+    var expectedAnswer = settings.studyDirection === 'en-pt' ? word.translation : word.word;
+    var isCorrect = checkAnswer(userAnswer, expectedAnswer);
 
-    const isCorrect = checkAnswer(userAnswer, expectedAnswer);
+    // Ranked mode: track lives
+    if (currentView === 'ranked') {
+      if (!isCorrect) {
+        rankedWrongCount++;
+        if (rankedWrongCount >= rankedMaxWrong) {
+          rankedDefeated = true;
+          activeFeedback = null;
+          App.refreshCurrentTab();
+          return;
+        }
+      }
+    }
 
-    Store.updateWordStats(word.id, isCorrect);
-    Store.recordStudyResult(isCorrect);
+    // Review mode: track wrong words for next round
+    if (currentView === 'review') {
+      if (!isCorrect) {
+        reviewSessionWrong.push(word);
+      } else if (typeof Achievements !== 'undefined') {
+        // Check first_review achievement
+        var state = Achievements.getState();
+        state.firstReview = true;
+        Achievements.checkAll(state);
+      }
+    }
 
-    if (isCorrect) sessionCorrect++;
-    else sessionWrong++;
-
+    recordStudyWord(word, isCorrect);
     activeFeedback = { correct: isCorrect };
     App.refreshCurrentTab();
   }
 
-  return { render, bindEvents };
+  function getCurrentWord() {
+    if (currentView === 'review') return reviewWords[currentWordIndex];
+    return studyWords[currentWordIndex];
+  }
+
+  return { render: render, bindEvents: bindEvents };
 })();

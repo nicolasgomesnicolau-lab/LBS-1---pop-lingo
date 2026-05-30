@@ -10,6 +10,7 @@ const Store = (() => {
     STUDY_STATS: 'lbs_study_stats',
     SETTINGS: 'lbs_settings',
     PLAYLIST: 'lbs_playlist',
+    ACHIEVEMENT_TRACK: 'lbs_achievement_track',
   };
 
   // ---- Helpers ----
@@ -58,6 +59,7 @@ const Store = (() => {
     });
     set(KEYS.WORDS, words);
     syncVocabToServer();
+    if (typeof Achievements !== 'undefined') Achievements.checkAll(Achievements.getState());
     return { success: true, message: 'Palavra adicionada!' };
   }
 
@@ -311,6 +313,68 @@ const Store = (() => {
     };
   }
 
+  // ---- Achievement Tracking ----
+  function initAchievementTrack() {
+    var t = get(KEYS.ACHIEVEMENT_TRACK);
+    if (!t) {
+      t = {
+        tabsVisited: [],
+        dailyTabs: {},
+        clipsWatched: {},
+        translationsOpened: 0,
+        bestCorrectStreak: 0,
+        lightningStudy: false,
+      };
+      set(KEYS.ACHIEVEMENT_TRACK, t);
+    }
+    return t;
+  }
+
+  function getTrack() {
+    return get(KEYS.ACHIEVEMENT_TRACK) || initAchievementTrack();
+  }
+
+  function saveTrack(t) {
+    set(KEYS.ACHIEVEMENT_TRACK, t);
+  }
+
+  function recordTabVisit(tabId) {
+    var t = getTrack();
+    if (t.tabsVisited.indexOf(tabId) === -1) t.tabsVisited.push(tabId);
+    var today = new Date().toISOString().split('T')[0];
+    if (!t.dailyTabs[today]) t.dailyTabs[today] = {};
+    t.dailyTabs[today][tabId] = true;
+    saveTrack(t);
+  }
+
+  function recordClipWatch(clipId) {
+    var t = getTrack();
+    var today = new Date().toISOString().split('T')[0];
+    if (!t.clipsWatched[today]) t.clipsWatched[today] = [];
+    if (t.clipsWatched[today].indexOf(clipId) === -1) t.clipsWatched[today].push(clipId);
+    saveTrack(t);
+  }
+
+  function incrementTranslations() {
+    var t = getTrack();
+    t.translationsOpened++;
+    saveTrack(t);
+  }
+
+  function recordCorrectStreak(streak) {
+    var t = getTrack();
+    if (streak > t.bestCorrectStreak) {
+      t.bestCorrectStreak = streak;
+      saveTrack(t);
+    }
+  }
+
+  function recordLightningStudy() {
+    var t = getTrack();
+    t.lightningStudy = true;
+    saveTrack(t);
+  }
+
   // ---- Supabase Sync ----
   function getAuthToken() {
     if (typeof Auth !== 'undefined' && Auth.getToken) return Auth.getToken();
@@ -381,5 +445,13 @@ const Store = (() => {
     generateId,
     fetchVocabFromServer,
     syncVocabToServer,
+
+    // Achievement tracking
+    getTrack,
+    recordTabVisit,
+    recordClipWatch,
+    incrementTranslations,
+    recordCorrectStreak,
+    recordLightningStudy,
   };
 })();

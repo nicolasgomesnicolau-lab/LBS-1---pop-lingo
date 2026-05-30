@@ -73,6 +73,9 @@ const Auth = (() => {
     if (typeof Store !== 'undefined' && Store.fetchVocabFromServer) {
       Store.fetchVocabFromServer();
     }
+    if (typeof Achievements !== 'undefined' && Achievements.fetchFromServer) {
+      Achievements.fetchFromServer();
+    }
   }
 
   // Full-screen login page — returns promise resolving with true (logged in) or false (guest)
@@ -118,12 +121,13 @@ const Auth = (() => {
         if (password.length < 6) { showError('Senha deve ter no mínimo 6 caracteres'); return; }
 
         loginBtn.disabled = true;
-        loginBtn.textContent = 'Aguarde...';
+        loginBtn.innerHTML = '<span class="btn-spinner"></span> Aguarde...';
 
         var promise = mode === 'login' ? login(email, password) : signup(email, password);
 
         promise.then(function(json) {
           loginBtn.disabled = false;
+          loginBtn.textContent = mode === 'login' ? 'Entrar' : 'Criar Conta';
           if (json.success) {
             screen.classList.remove('active');
             syncAfterLogin();

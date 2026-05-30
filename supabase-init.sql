@@ -39,3 +39,20 @@ CREATE POLICY "Users can manage their own vocab"
   FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+-- Achievements table (one row per user)
+CREATE TABLE IF NOT EXISTS achievements_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID UNIQUE NOT NULL,
+  data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE achievements_data ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own achievements" ON achievements_data;
+CREATE POLICY "Users can manage their own achievements"
+  ON achievements_data
+  FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);

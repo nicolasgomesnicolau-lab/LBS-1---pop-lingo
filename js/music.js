@@ -452,6 +452,16 @@ const MusicTab = (() => {
     embedVideo(song.videoId, 0);
     App.refreshCurrentTab();
     fetchKaraoke(song.videoId);
+
+    // Track in music history for achievements
+    if (typeof Store !== 'undefined' && Store.addMusicHistory) {
+      Store.addMusicHistory({ title: song.title, artist: song.artist, thumbnail: '', youtubeId: song.videoId, partsCompleted: [], totalParts: 3 });
+    }
+    setTimeout(function() {
+      if (typeof Achievements !== 'undefined') {
+        Achievements.checkAll(Achievements.getState());
+      }
+    }, 200);
   }
 
   function togglePlay() {

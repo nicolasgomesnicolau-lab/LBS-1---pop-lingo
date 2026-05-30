@@ -111,6 +111,15 @@ const MoviesTab = (() => {
       stopMovieSync(); // Stop syncing when paused/ended
       if (event.data === YT.PlayerState.ENDED) {
         movieCurrentTime = 0; // Reset time if video ended
+        // Track clip watch for achievements
+        if (currentClip && typeof Store !== 'undefined' && Store.recordClipWatch) {
+          Store.recordClipWatch(currentClip.id);
+        }
+        setTimeout(function() {
+          if (typeof Achievements !== 'undefined') {
+            Achievements.checkAll(Achievements.getState());
+          }
+        }, 100);
       }
     }
     updateMoviePlayerUI();

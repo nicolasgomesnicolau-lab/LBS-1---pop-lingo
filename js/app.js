@@ -11,7 +11,8 @@ const App = (() => {
     movies: MoviesTab,
     study: StudyTab,
     music: MusicTab,
-    chat: ChatTab
+    chat: ChatTab,
+    profile: ProfileTab,
   };
 
   function hideApp() {
@@ -102,6 +103,18 @@ const App = (() => {
       }
     });
 
+    // Track tab visit for achievements
+    if (typeof Store !== 'undefined' && Store.recordTabVisit) {
+      Store.recordTabVisit(tabId);
+    }
+
+    // Check achievements after tab visit (explorer, allInOneDay, multimediaDay)
+    setTimeout(function() {
+      if (typeof Achievements !== 'undefined') {
+        Achievements.checkAll(Achievements.getState());
+      }
+    }, 100);
+
     // Render the active tab content
     refreshCurrentTab();
   }
@@ -151,6 +164,14 @@ const App = (() => {
     const overlay = document.getElementById('global-overlay');
     
     if (!bubble || !overlay) return;
+
+    // Track translation lookup for achievements
+    if (typeof Store !== 'undefined' && Store.incrementTranslations) {
+      Store.incrementTranslations();
+    }
+    if (typeof Achievements !== 'undefined') {
+      Achievements.checkAll(Achievements.getState());
+    }
 
     document.getElementById('bubble-word').textContent = word;
     document.getElementById('bubble-translation').textContent = translation;
