@@ -63,6 +63,12 @@
 
 
 
+  <!-- User status bar -->
+  <div class="user-bar" id="user-bar" style="display:none">
+    <span id="user-bar-email"></span>
+    <button id="user-bar-logout">Sair</button>
+  </div>
+
   <!-- Sound Test Button -->
   <button id="sound-test-btn" title="Testar som" style="position:fixed;right:16px;top:50%;width:48px;height:48px;border-radius:50%;background:var(--accent,#6c5ce7);color:#fff;border:2px solid rgba(255,255,255,0.2);font-size:20px;cursor:pointer;z-index:999;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,0.3);transition:transform 0.15s">🔊</button>
 
@@ -72,23 +78,33 @@
   <!-- Global Overlay -->
   <div class="modal-overlay" id="global-overlay"></div>
 
-  <!-- Auth Modal -->
-  <div class="modal-overlay" id="auth-overlay"></div>
-  <div class="auth-modal" id="auth-modal">
-    <div class="auth-modal-header">
-      <h3 id="auth-title">Entrar</h3>
-      <p style="color:var(--text-muted);font-size:var(--font-sm)">Acesse o modo administrador</p>
-    </div>
-    <div class="auth-modal-body">
-      <div class="input-group mb-base">
-        <input type="email" class="input-field" id="auth-email" placeholder="Email" autocomplete="email">
+  <!-- Login Screen (full-page, shown on startup) -->
+  <div class="login-screen" id="login-screen">
+    <div class="login-container">
+      <div class="login-logo">🎬</div>
+      <h1 class="login-brand">Pop Lingo</h1>
+      <p class="login-desc" id="login-subtitle">Acesse sua conta para sincronizar seus estudos</p>
+
+      <div class="login-form">
+        <h3 id="login-title">Entrar</h3>
+
+        <div class="input-group mb-base">
+          <input type="email" class="input-field" id="login-email" placeholder="Email" autocomplete="email">
+        </div>
+        <div class="input-group mb-base">
+          <input type="password" class="input-field" id="login-password" placeholder="Senha" autocomplete="current-password">
+        </div>
+
+        <div class="login-error" id="login-error"></div>
+
+        <button class="btn btn-primary btn-block btn-lg" id="login-btn">Entrar</button>
+
+        <button class="btn btn-link btn-block" id="login-mode-toggle" style="margin-top:var(--space-sm)">Não tem conta? Cadastre-se</button>
+
+        <div class="login-divider"><span>ou</span></div>
+
+        <button class="btn btn-secondary btn-block" id="login-skip-btn">Continuar como visitante</button>
       </div>
-      <div class="input-group mb-base">
-        <input type="password" class="input-field" id="auth-password" placeholder="Senha" autocomplete="current-password">
-      </div>
-      <div class="auth-error" id="auth-error"></div>
-      <button class="btn btn-primary btn-block" id="auth-submit">Entrar</button>
-      <button class="btn btn-link btn-block" id="auth-toggle" style="margin-top:var(--space-sm);color:var(--accent);background:none;border:none;cursor:pointer;font-size:var(--font-sm)">Criar uma conta</button>
     </div>
   </div>
 

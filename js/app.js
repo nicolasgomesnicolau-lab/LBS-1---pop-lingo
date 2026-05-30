@@ -14,10 +14,31 @@ const App = (() => {
     chat: ChatTab
   };
 
-  function init() {
-    // Initialize auth (verify stored session)
-    if (typeof Auth !== 'undefined' && Auth.init) Auth.init();
+  function hideApp() {
+    document.getElementById('app').style.display = 'none';
+  }
 
+  function showApp() {
+    document.getElementById('app').style.display = '';
+  }
+
+  function updateUserBar() {
+    var bar = document.getElementById('user-bar');
+    var emailEl = document.getElementById('user-bar-email');
+    var appEl = document.getElementById('app');
+    if (!bar || !emailEl) return;
+    if (typeof Auth !== 'undefined' && Auth.isLoggedIn && Auth.isLoggedIn()) {
+      var u = Auth.getUser();
+      bar.style.display = 'flex';
+      emailEl.textContent = u ? u.email : '';
+      if (appEl) appEl.style.paddingTop = '32px';
+    } else {
+      bar.style.display = 'none';
+      if (appEl) appEl.style.paddingTop = '';
+    }
+  }
+
+  function init() {
     // Make sure we have our data structure initialized
     if (!localStorage.getItem('lbs_settings')) {
       Store.updateSettings({ studyDirection: 'en-pt' });
@@ -26,7 +47,6 @@ const App = (() => {
     // Set up navigation events
     document.querySelectorAll('.nav-item').forEach(item => {
       item.addEventListener('click', (e) => {
-        // Find the closest nav item in case they clicked the icon
         const navItem = e.target.closest('.nav-item');
         if (navItem) {
           switchTab(navItem.dataset.tab);
@@ -37,8 +57,35 @@ const App = (() => {
     // Close word bubble on clicking the overlay
     document.getElementById('global-overlay')?.addEventListener('click', hideWordBubble);
 
-    // Initial render
-    switchTab(currentTab);
+    // Logout button
+    document.getElementById('user-bar-logout')?.addEventListener('click', function() {
+      if (typeof Auth !== 'undefined' && Auth.logout) Auth.logout();
+      updateUserBar();
+      showLoginFirst();
+    });
+
+    // Show login screen first, then render app
+    showLoginFirst();
+  }
+
+  function showLoginFirst() {
+    var alreadyLoggedIn = typeof Auth !== 'undefined' && Auth.init && Auth.init();
+    if (alreadyLoggedIn) {
+      updateUserBar();
+      switchTab(currentTab);
+      showApp();
+      return;
+    }
+    if (typeof Auth !== 'undefined' && Auth.showLoginScreen) {
+      Auth.showLoginScreen().then(function() {
+        updateUserBar();
+        switchTab(currentTab);
+        showApp();
+      });
+    } else {
+      switchTab(currentTab);
+      showApp();
+    }
   }
 
   function switchTab(tabId) {
@@ -165,7 +212,10 @@ const App = (() => {
     refreshCurrentTab,
     showToast,
     showWordBubble,
-    hideWordBubble
+    hideWordBubble,
+    hideApp,
+    showApp,
+    updateUserBar
   };
 })();
 

@@ -44,7 +44,6 @@ const Auth = (() => {
     }).then(function(r) { return r.json(); }).then(function(json) {
       if (json.success && json.session) {
         setSession({ access_token: json.session.access_token, user: json.user });
-        syncAfterLogin();
       }
       return json;
     });
@@ -58,7 +57,6 @@ const Auth = (() => {
     }).then(function(r) { return r.json(); }).then(function(json) {
       if (json.success && json.session) {
         setSession({ access_token: json.session.access_token, user: json.user });
-        syncAfterLogin();
       }
       return json;
     });
@@ -66,6 +64,9 @@ const Auth = (() => {
 
   function logout() {
     clearSession();
+    var screen = document.getElementById('login-screen');
+    if (screen) screen.classList.add('active');
+    if (typeof App !== 'undefined' && App.hideApp) App.hideApp();
   }
 
   function syncAfterLogin() {
@@ -74,30 +75,35 @@ const Auth = (() => {
     }
   }
 
-  // Show login modal — returns promise that resolves with success/fail
-  function showLoginModal() {
+  // Full-screen login page — returns promise resolving with true (logged in) or false (guest)
+  function showLoginScreen() {
     return new Promise(function(resolve) {
-      var overlay = document.getElementById('auth-overlay');
-      var modal = document.getElementById('auth-modal');
-      if (!overlay || !modal) { resolve(false); return; }
+      var screen = document.getElementById('login-screen');
+      if (!screen) { resolve(false); return; }
+
+      var emailInput = screen.querySelector('#login-email');
+      var passInput = screen.querySelector('#login-password');
+      var loginBtn = screen.querySelector('#login-btn');
+      var signupBtn = screen.querySelector('#signup-btn');
+      var skipBtn = screen.querySelector('#login-skip-btn');
+      var errorEl = screen.querySelector('#login-error');
+      var modeToggle = screen.querySelector('#login-mode-toggle');
+      var titleEl = screen.querySelector('#login-title');
+      var subtitleEl = screen.querySelector('#login-subtitle');
 
       var mode = 'login';
-      var emailInput = modal.querySelector('#auth-email');
-      var passInput = modal.querySelector('#auth-password');
-      var submitBtn = modal.querySelector('#auth-submit');
-      var toggleBtn = modal.querySelector('#auth-toggle');
-      var errorEl = modal.querySelector('#auth-error');
-      var titleEl = modal.querySelector('#auth-title');
 
       function setMode(m) {
         mode = m;
         titleEl.textContent = m === 'login' ? 'Entrar' : 'Criar Conta';
-        submitBtn.textContent = m === 'login' ? 'Entrar' : 'Criar Conta';
-        toggleBtn.textContent = m === 'login' ? 'Criar uma conta' : 'Já tem conta? Entrar';
+        subtitleEl.textContent = m === 'login' ? 'Acesse sua conta para sincronizar seus estudos' : 'Crie uma conta e leve seu vocabulário para qualquer dispositivo';
+        loginBtn.textContent = m === 'login' ? 'Entrar' : 'Criar Conta';
+        signupBtn.style.display = m === 'login' ? 'none' : 'none';
+        modeToggle.textContent = m === 'login' ? 'Não tem conta? Cadastre-se' : 'Já tem conta? Entrar';
         errorEl.textContent = '';
+        errorEl.style.display = 'none';
         emailInput.value = '';
         passInput.value = '';
-        emailInput.focus();
       }
 
       function showError(msg) {
@@ -105,22 +111,22 @@ const Auth = (() => {
         errorEl.style.display = 'block';
       }
 
-      function doSubmit() {
+      function doAuth() {
         var email = emailInput.value.trim();
         var password = passInput.value.trim();
         if (!email || !password) { showError('Preencha email e senha'); return; }
         if (password.length < 6) { showError('Senha deve ter no mínimo 6 caracteres'); return; }
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Aguarde...';
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'Aguarde...';
 
         var promise = mode === 'login' ? login(email, password) : signup(email, password);
 
         promise.then(function(json) {
-          submitBtn.disabled = false;
+          loginBtn.disabled = false;
           if (json.success) {
-            overlay.classList.remove('active');
-            modal.classList.remove('active');
+            screen.classList.remove('active');
+            syncAfterLogin();
             resolve(true);
           } else {
             var msg = json.error || 'Erro desconhecido';
@@ -128,41 +134,40 @@ const Auth = (() => {
             if (msg.includes('already registered')) msg = 'Este email já está cadastrado';
             if (msg.includes('Email not confirmed')) msg = 'Confirme seu email antes de entrar';
             showError(msg);
-            submitBtn.textContent = mode === 'login' ? 'Entrar' : 'Criar Conta';
+            loginBtn.textContent = mode === 'login' ? 'Entrar' : 'Criar Conta';
           }
         });
       }
 
-      // Clean up old listeners by cloning buttons
-      var newSubmit = submitBtn.cloneNode(true);
-      submitBtn.parentNode.replaceChild(newSubmit, submitBtn);
-      var newToggle = toggleBtn.cloneNode(true);
-      toggleBtn.parentNode.replaceChild(newToggle, toggleBtn);
+      // Clone buttons to remove old listeners
+      var newLogin = loginBtn.cloneNode(true);
+      loginBtn.parentNode.replaceChild(newLogin, loginBtn);
+      var newToggle = modeToggle.cloneNode(true);
+      modeToggle.parentNode.replaceChild(newToggle, modeToggle);
+      var newSkip = skipBtn.cloneNode(true);
+      skipBtn.parentNode.replaceChild(newSkip, skipBtn);
 
-      newSubmit.addEventListener('click', doSubmit);
+      newLogin.addEventListener('click', doAuth);
       newToggle.addEventListener('click', function() { setMode(mode === 'login' ? 'signup' : 'login'); });
-
-      passInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') doSubmit();
+      newSkip.addEventListener('click', function() {
+        screen.classList.remove('active');
+        resolve(false);
       });
 
-      overlay.classList.add('active');
-      modal.classList.add('active');
-      setMode('login');
+      passInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') doAuth();
+      });
 
-      // Close on overlay click
-      overlay.addEventListener('click', function() {
-        overlay.classList.remove('active');
-        modal.classList.remove('active');
-        resolve(false);
-      }, { once: true });
+      screen.classList.add('active');
+      setMode('login');
+      emailInput.focus();
     });
   }
 
-  // Check session on load and sync vocab
+  // Check session on load
   function init() {
     var token = getToken();
-    if (!token) return;
+    if (!token) return false;
     fetch('/api/auth/me', {
       headers: { 'Authorization': 'Bearer ' + token }
     }).then(function(r) { return r.json(); }).then(function(json) {
@@ -172,6 +177,7 @@ const Auth = (() => {
         clearSession();
       }
     }).catch(function() { clearSession(); });
+    return true;
   }
 
   return {
@@ -183,6 +189,6 @@ const Auth = (() => {
     getToken: getToken,
     getUser: getUser,
     getSession: getSession,
-    showLoginModal: showLoginModal
+    showLoginScreen: showLoginScreen
   };
 })();

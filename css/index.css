@@ -196,6 +196,8 @@ input:-webkit-autofill:focus {
   min-height: calc(100dvh - var(--nav-height));
 }
 
+
+
 .tab-content.active {
   display: block;
   animation: fadeIn 0.3s ease;

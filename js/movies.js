@@ -26,17 +26,11 @@ const MoviesTab = (() => {
       });
   }
 
-  function getAdminToken() {
-    // Try JWT first, then fall back to legacy admin token
-    var jwt = typeof Auth !== 'undefined' && Auth.getToken ? Auth.getToken() : null;
-    return jwt || _adminToken || '';
-  }
-
   function saveMoviesToServer() {
     return fetch('/api/movies/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: getAdminToken(), movies: serverMovies })
+      body: JSON.stringify({ token: _adminToken, movies: serverMovies })
     }).then(function(r) { return r.json(); });
   }
 
@@ -373,13 +367,6 @@ const MoviesTab = (() => {
   }
 
   function renderAdminPanel() {
-    var userEmail = '';
-    if (typeof Auth !== 'undefined' && Auth.getUser) {
-      var u = Auth.getUser();
-      if (u) userEmail = u.email;
-    }
-    var loggedInViaJwt = !!(typeof Auth !== 'undefined' && Auth.isLoggedIn && Auth.isLoggedIn());
-
     return `
       <div class="admin-panel active">
         <div class="movie-player-header">
@@ -387,8 +374,6 @@ const MoviesTab = (() => {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
           </div>
           <h2>Modo Admin</h2>
-          ${loggedInViaJwt ? `<span style="font-size:var(--font-xs);color:var(--text-muted);margin-left:auto;padding-right:var(--space-sm)">${escapeHtml(userEmail)}</span>` : ''}
-          ${loggedInViaJwt ? '<button class="btn btn-sm btn-secondary" id="auth-logout-btn" style="font-size:11px;padding:4px 10px">Sair</button>' : ''}
         </div>
 
         <div class="card mb-lg" style="padding: var(--space-xl);">
@@ -519,25 +504,11 @@ const MoviesTab = (() => {
   // ---- Events ----
 
   function bindEvents(container) {
-    // Admin button — try JWT login first, fall back to password
+    // Admin button — password only
     container.querySelector('#movies-admin-btn')?.addEventListener('click', () => {
       if (isAdmin) {
         currentView = 'admin';
         App.refreshCurrentTab();
-        return;
-      }
-      if (typeof Auth !== 'undefined' && Auth.showLoginModal) {
-        Auth.showLoginModal().then(function(success) {
-          if (success) {
-            isAdmin = true;
-            currentView = 'admin';
-            App.showToast('Modo admin ativado!', 'success');
-            App.refreshCurrentTab();
-          } else {
-            // User closed modal — try legacy password as fallback
-            showAdminPasswordPrompt();
-          }
-        });
       } else {
         showAdminPasswordPrompt();
       }
@@ -564,15 +535,6 @@ const MoviesTab = (() => {
 
     container.querySelector('#admin-back-btn')?.addEventListener('click', () => {
       currentView = 'list';
-      App.refreshCurrentTab();
-    });
-
-    container.querySelector('#auth-logout-btn')?.addEventListener('click', () => {
-      if (typeof Auth !== 'undefined' && Auth.logout) Auth.logout();
-      isAdmin = false;
-      _adminToken = '';
-      currentView = 'list';
-      App.showToast('Sessão encerrada', 'success');
       App.refreshCurrentTab();
     });
 
