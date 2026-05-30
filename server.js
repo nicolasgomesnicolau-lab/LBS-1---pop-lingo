@@ -102,7 +102,21 @@ function writeMoviesFile(movies) {
   }
 }
 
-function searchYouTube(query) {
+function dataApiSearch(query) {
+  return fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&q=' + encodeURIComponent(query) + '&key=' + YT_API_KEY + '&type=video&maxResults=10')
+    .then(function(r) {
+      if (r.status === 429) throw new Error('quota_exceeded');
+      return r.json();
+    })
+    .then(function(json) {
+      if (json.error) throw new Error(json.error.message);
+      return (json.items || []).map(function(item) {
+        return { title: item.snippet.title, author: item.snippet.channelTitle, videoId: item.id.videoId, thumbnail: item.snippet.thumbnails.default ? item.snippet.thumbnails.default.url : '' };
+      });
+    });
+}
+
+function ytSearchSearch(query) {
   return ytSearch({ query: query, hl: 'en', gl: 'US' }).then(function(result) {
     return (result.videos || []).slice(0, 15).map(function(v) {
       return {
@@ -112,6 +126,15 @@ function searchYouTube(query) {
         thumbnail: v.thumbnail || 'https://img.youtube.com/vi/' + v.videoId + '/mqdefault.jpg'
       };
     });
+  });
+}
+
+function doYouTubeSearch(query) {
+  return dataApiSearch(query).catch(function(err) {
+    if (err.message === 'quota_exceeded') {
+      return ytSearchSearch(query);
+    }
+    return ytSearchSearch(query);
   });
 }
 
@@ -271,7 +294,7 @@ http.createServer((req, res) => {
       res.end(JSON.stringify({ error: 'Faltando query' }));
       return;
     }
-    searchYouTube(q.trim()).then(function(videos) {
+    doYouTubeSearch(q.trim()).then(function(videos) {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(videos));
     }).catch(function(err) {
