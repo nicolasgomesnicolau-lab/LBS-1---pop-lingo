@@ -18,6 +18,7 @@ const StudyTab = (() => {
   let rankedDefeated = false;
   let sessionStartTime = 0;
   let sessionStreak = 0;
+  let sessionWrongWords = []; // words wrong in current session (for end-of-session review)
 
   // Review tracking
   let reviewWords = [];     // words that were wrong
@@ -54,11 +55,6 @@ const StudyTab = (() => {
     const stats = Store.getAggregatedStats(periodDays);
     const goalProgress = Math.min((todayStats.wordsStudied / 10) * 100, 100);
     const wordCount = Store.getWords().length;
-
-    // Check if there are words with errors to review
-    var words = Store.getWords();
-    var wrongWords = words.filter(function(w) { return w.timesWrong > w.timesCorrect; });
-    var hasReview = wrongWords.length > 0;
 
     return `
       <div class="tab-header">
@@ -141,7 +137,10 @@ const StudyTab = (() => {
           <h3>Modo Padrão</h3>
           <p>Clique na palavra para ver a tradução</p>
         </div>
-        <span class="mode-card-arrow">→</span>
+        <div class="mode-card-actions">
+          <span class="mode-card-arrow" data-mode="standard">→</span>
+          <span class="mode-ranked-toggle" data-ranked="standard" title="Versão ranqueada">⚔️</span>
+        </div>
       </div>
 
       <div class="mode-card" data-mode="active">
@@ -150,27 +149,10 @@ const StudyTab = (() => {
           <h3>Modo Ativo</h3>
           <p>Digite a tradução correta</p>
         </div>
-        <span class="mode-card-arrow">→</span>
-      </div>
-
-      ${hasReview ? `
-      <div class="mode-card" data-mode="review" style="border-color: rgba(245, 158, 11, 0.3);">
-        <div class="mode-card-icon" style="background: rgba(245, 158, 11, 0.15);">🔄</div>
-        <div class="mode-card-info">
-          <h3 style="color: var(--warning);">Revisão <span class="badge badge-warning" style="font-size:10px">${wrongWords.length} pendentes</span></h3>
-          <p>Revise as palavras que você errou</p>
+        <div class="mode-card-actions">
+          <span class="mode-card-arrow" data-mode="active">→</span>
+          <span class="mode-ranked-toggle" data-ranked="active" title="Versão ranqueada">⚔️</span>
         </div>
-        <span class="mode-card-arrow">→</span>
-      </div>
-      ` : ''}
-
-      <div class="mode-card" data-mode="ranked">
-        <div class="mode-card-icon" style="background: rgba(255, 77, 106, 0.15);">⚔️</div>
-        <div class="mode-card-info">
-          <h3 style="color: var(--error);">Modo Ranqueado</h3>
-          <p>Errou? Volta ao início! 🔥</p>
-        </div>
-        <span class="mode-card-arrow">→</span>
       </div>
 
       <div class="mode-card" data-mode="basic">
@@ -486,6 +468,7 @@ const StudyTab = (() => {
   function renderComplete(mode, isRanked) {
     var total = sessionCorrect + sessionWrong;
     var percentage = total > 0 ? Math.round((sessionCorrect / total) * 100) : 0;
+    var hasWrongWords = sessionWrongWords.length > 0;
 
     return `
       <div class="study-session active">
@@ -509,15 +492,17 @@ const StudyTab = (() => {
             </div>
           </div>
 
-          ${mode === 'review' && reviewSessionWrong.length > 0 ? `
+          ${hasWrongWords ? `
             <div class="info-banner mb-lg">
               <span>🔄</span>
-              <span>${reviewSessionWrong.length} palavra(s) ainda precisam de revisão na próxima rodada</span>
+              <span>Você errou ${sessionWrongWords.length} palavra(s) — revise abaixo!</span>
             </div>
-          ` : ''}
-
-          <button class="btn btn-primary btn-lg" data-study-again="${mode}" ${isRanked ? 'data-ranked="1"' : ''}>Estudar novamente</button>
-          <button class="btn btn-secondary btn-lg mt-base" id="study-back-main-btn">Voltar</button>
+            <button class="btn btn-warning btn-lg" id="review-wrong-btn">Revisar ${sessionWrongWords.length} erros</button>
+            <button class="btn btn-secondary btn-lg mt-base" id="study-back-main-btn">Voltar</button>
+          ` : `
+            <button class="btn btn-primary btn-lg" data-study-again="${mode}" ${isRanked ? 'data-ranked="1"' : ''}>Estudar novamente</button>
+            <button class="btn btn-secondary btn-lg mt-base" id="study-back-main-btn">Voltar</button>
+          `}
         </div>
       </div>
     `;
@@ -645,6 +630,7 @@ const StudyTab = (() => {
     rankedRound = 1;
     sessionStartTime = Date.now();
     sessionStreak = 0;
+    sessionWrongWords = [];
   }
 
   var _lastWordTime = Date.now();
@@ -691,24 +677,40 @@ const StudyTab = (() => {
   // ---- Events ----
   function bindEvents(container) {
     // Mode selection
-    container.querySelectorAll('[data-mode]').forEach(function(card) {
-      card.addEventListener('click', function() {
+    // Mode card main area (basic / standard / active)
+    container.querySelectorAll('.mode-card').forEach(function(card) {
+      card.addEventListener('click', function(e) {
+        // Ignore clicks on arrow or ranked toggle
+        if (e.target.closest('.mode-card-arrow') || e.target.closest('.mode-ranked-toggle')) return;
         var mode = this.dataset.mode;
         if (mode === 'basic') {
           currentView = 'basic';
-        } else if (mode === 'review') {
-          resetSession();
-          reviewWords = [];
-          reviewRound = 1;
-          reviewSessionWrong = [];
-          currentView = 'review';
-        } else if (mode === 'ranked') {
-          resetSession();
-          currentView = 'ranked';
         } else {
           resetSession();
           currentView = mode;
         }
+        App.refreshCurrentTab();
+      });
+    });
+
+    // Mode card arrows (standard / active) — click arrow starts normal mode
+    container.querySelectorAll('.mode-card-arrow').forEach(function(arrow) {
+      arrow.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var mode = this.dataset.mode;
+        resetSession();
+        currentView = mode;
+        App.refreshCurrentTab();
+      });
+    });
+
+    // Ranked toggles — click ⚔️ starts ranked mode
+    container.querySelectorAll('.mode-ranked-toggle').forEach(function(toggle) {
+      toggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        resetSession();
+        rankedDefeated = false;
+        currentView = 'ranked';
         App.refreshCurrentTab();
       });
     });
@@ -778,6 +780,7 @@ const StudyTab = (() => {
     container.querySelector('#study-wrong-btn')?.addEventListener('click', function() {
       var word = studyWords[currentWordIndex];
       recordStudyWord(word, false);
+      sessionWrongWords.push(word);
       currentWordIndex++;
       isFlipped = false;
       App.refreshCurrentTab();
@@ -809,16 +812,25 @@ const StudyTab = (() => {
           currentView = 'ranked';
         } else if (mode === 'review') {
           resetSession();
-          reviewWords = [];
-          reviewRound = 1;
-          reviewSessionWrong = [];
-          currentView = 'review';
+          currentView = 'main';
         } else {
           resetSession();
           currentView = mode;
         }
         App.refreshCurrentTab();
       });
+    });
+
+    // Review wrong words at session end
+    container.querySelector('#review-wrong-btn')?.addEventListener('click', function() {
+      reviewWords = sessionWrongWords;
+      reviewSessionWrong = [];
+      reviewRound = 1;
+      currentWordIndex = 0;
+      sessionCorrect = 0;
+      sessionWrong = 0;
+      currentView = 'review';
+      App.refreshCurrentTab();
     });
 
     container.querySelector('#study-back-main-btn')?.addEventListener('click', function() {
@@ -884,16 +896,20 @@ const StudyTab = (() => {
       }
     }
 
-    // Review mode: track wrong words for next round
-    if (currentView === 'review') {
-      if (!isCorrect) {
-        reviewSessionWrong.push(word);
-      } else if (typeof Achievements !== 'undefined') {
-        // Check first_review achievement
-        var state = Achievements.getState();
-        state.firstReview = true;
-        Achievements.checkAll(state);
+    if (!isCorrect) {
+      // Track wrong words for end-of-session review (standard & active modes)
+      if (currentView !== 'review' && currentView !== 'ranked') {
+        sessionWrongWords.push(word);
       }
+      // Review mode: track for next round
+      if (currentView === 'review') {
+        reviewSessionWrong.push(word);
+      }
+    } else if (currentView === 'review' && typeof Achievements !== 'undefined') {
+      // Check first_review achievement
+      var state = Achievements.getState();
+      state.firstReview = true;
+      Achievements.checkAll(state);
     }
 
     recordStudyWord(word, isCorrect);
