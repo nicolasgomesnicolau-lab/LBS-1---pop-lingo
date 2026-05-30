@@ -14,7 +14,7 @@ const Achievements = (() => {
     { id: 'platina', label: '💎 Platina', min: 30 },
     { id: 'diamante', label: '🔷 Diamante', min: 45 },
     { id: 'mestre', label: '👑 Mestre', min: 55 },
-    { id: 'lenda', label: '🔥 Lenda', min: 65 },
+    { id: 'lenda', label: '🔥 Lenda', min: 74 },
   ];
 
   var ALL = [
