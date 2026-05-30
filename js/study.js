@@ -25,6 +25,7 @@ const StudyTab = (() => {
   let reviewWords = [];     // words that were wrong
   let reviewRound = 1;      // current review round
   let reviewSessionWrong = []; // words wrong in current review
+  let reviewStyle = 'active'; // 'standard' (flip card) or 'active' (typing) — matches the original session mode
 
   const lessons = [
     { emoji: '🔗', title: 'Phrasal Verbs — Básico', desc: 'Palavras juntas mudam o sentido' },
@@ -326,6 +327,38 @@ const StudyTab = (() => {
     var total = reviewWords.length;
     var progress = (currentWordIndex / total) * 100;
 
+    if (reviewStyle === 'standard') {
+      return `
+        <div class="study-session active">
+          <div class="study-session-header">
+            <div class="back-btn" data-study-back="main" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-tertiary);cursor:pointer;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </div>
+            <div style="flex:1;">
+              <div class="progress-bar progress-bar-sm">
+                <div class="progress-bar-fill" style="width: ${progress}%"></div>
+              </div>
+            </div>
+            <span class="study-progress-info">Revisão R${reviewRound} · ${currentWordIndex + 1}/${total}</span>
+          </div>
+
+          <div class="study-card-container">
+            <div style="width:100%;">
+              <div class="card" style="padding: var(--space-2xl); text-align: center; margin-bottom: var(--space-lg); border-color: rgba(245, 158, 11, 0.3);">
+                <span style="font-size:var(--font-sm);color:var(--warning);margin-bottom:var(--space-sm);display:block">🔄 Revisão — já errou esta palavra antes</span>
+                ${renderStandardCard(showWord, showAnswer)}
+              </div>
+
+              <div class="study-actions" style="visibility: ${isFlipped ? 'visible' : 'hidden'};">
+                <button class="btn study-btn-wrong" id="review-wrong-std-btn">✗ Errei</button>
+                <button class="btn study-btn-correct" id="review-correct-btn">✓ Acertei</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     return `
       <div class="study-session active">
         <div class="study-session-header">
@@ -532,7 +565,7 @@ const StudyTab = (() => {
               <span>🔄</span>
               <span>Você errou ${sessionWrongWords.length} palavra(s) — revise abaixo!</span>
             </div>
-            <button class="btn btn-warning btn-lg" id="review-wrong-btn">Revisar ${sessionWrongWords.length} erros</button>
+            <button class="btn btn-warning btn-lg" id="start-review-btn" data-review-style="${mode === 'standard' ? 'standard' : 'active'}">Revisar ${sessionWrongWords.length} erros</button>
             <button class="btn btn-secondary btn-lg mt-base" id="study-back-main-btn">Voltar</button>
           ` : `
             <button class="btn btn-primary btn-lg" data-study-again="${mode}" ${isRanked ? 'data-ranked="1"' : ''}>Estudar novamente</button>
@@ -861,14 +894,34 @@ const StudyTab = (() => {
     });
 
     // Review wrong words at session end
-    container.querySelector('#review-wrong-btn')?.addEventListener('click', function() {
-      reviewWords = sessionWrongWords;
+    container.querySelector('#start-review-btn')?.addEventListener('click', function() {
+      reviewWords = sessionWrongWords.slice();
+      reviewStyle = this.dataset.reviewStyle || 'active';
       reviewSessionWrong = [];
       reviewRound = 1;
       currentWordIndex = 0;
       sessionCorrect = 0;
       sessionWrong = 0;
+      isFlipped = false;
       currentView = 'review';
+      App.refreshCurrentTab();
+    });
+
+    // Review standard mode (flip card with wrong/correct buttons)
+    container.querySelector('#review-correct-btn')?.addEventListener('click', function() {
+      var word = reviewWords[currentWordIndex];
+      recordStudyWord(word, true);
+      currentWordIndex++;
+      isFlipped = false;
+      App.refreshCurrentTab();
+    });
+
+    container.querySelector('#review-wrong-std-btn')?.addEventListener('click', function() {
+      var word = reviewWords[currentWordIndex];
+      recordStudyWord(word, false);
+      reviewSessionWrong.push(word);
+      currentWordIndex++;
+      isFlipped = false;
       App.refreshCurrentTab();
     });
 
@@ -985,5 +1038,28 @@ const StudyTab = (() => {
     return studyWords[currentWordIndex];
   }
 
-  return { render: render, bindEvents: bindEvents };
+  // Start a session with external words (from movies/music media)
+  function startMediaSession(words, mode) {
+    if (!words || words.length === 0) return;
+    studyWords = words;
+    currentView = mode || 'standard';
+    currentWordIndex = 0;
+    isFlipped = false;
+    sessionCorrect = 0;
+    sessionWrong = 0;
+    activeFeedback = null;
+    rankedDefeated = false;
+    rankedWrongCount = 0;
+    rankedRound = 1;
+    sessionStartTime = Date.now();
+    sessionStreak = 0;
+    sessionWrongWords = [];
+    reviewWords = [];
+    // Switch to study tab
+    if (typeof App !== 'undefined' && App.switchTab) {
+      App.switchTab('study');
+    }
+  }
+
+  return { render: render, bindEvents: bindEvents, startMediaSession: startMediaSession };
 })();

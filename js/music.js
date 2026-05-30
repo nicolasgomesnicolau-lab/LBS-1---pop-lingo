@@ -614,7 +614,8 @@ const MusicTab = (() => {
     return '<div class="music-player-view active">' +
       '<div class="flex-between mb-base"><button class="btn btn-secondary btn-sm" id="player-back-btn">← Voltar</button>' +
       '<div style="display:flex;gap:var(--space-sm)"><button class="btn btn-secondary btn-sm" id="player-heard-btn">' + (heardMode ? '🔇 Heard On' : '🔊 Heard Off') + '</button>' +
-      '<button class="btn btn-secondary btn-sm" id="player-playlist-btn">' + (inPlaylist ? '✕ Remover' : '+ Playlist') + '</button></div></div>' +
+      '<button class="btn btn-secondary btn-sm" id="player-playlist-btn">' + (inPlaylist ? '✕ Remover' : '+ Playlist') + '</button>' +
+      '<button class="btn btn-secondary btn-sm" id="study-lyrics-btn">📖 Estudar</button></div></div>' +
 
       '<div class="music-player card mb-base"><div class="flex-center" style="padding:var(--space-xl);padding-bottom:0">' +
       '<div class="player-cover" style="width:100px;height:100px;border-radius:var(--radius-lg);overflow:hidden">' +
@@ -916,6 +917,23 @@ const MusicTab = (() => {
       });
     }
 
+    // Study lyrics button
+    var studyLyricsBtn = container.querySelector('#study-lyrics-btn');
+    if (studyLyricsBtn) {
+      studyLyricsBtn.addEventListener('click', function () {
+        if (karaokeData.length === 0) { App.showToast('Nenhuma letra carregada', 'error'); return; }
+        var allText = karaokeData.map(function(e) { return e.text; }).join(' ');
+        var uniqueWords = musicExtractUniqueWords(allText);
+        if (uniqueWords.length === 0) { App.showToast('Nenhuma palavra encontrada na letra', 'error'); return; }
+        App.showToast('Traduzindo ' + uniqueWords.length + ' palavras...', 'info');
+        musicTranslateWordList(uniqueWords, function(translated) {
+          if (typeof StudyTab !== 'undefined' && StudyTab.startMediaSession) {
+            StudyTab.startMediaSession(translated, 'standard');
+          }
+        });
+      });
+    }
+
     var retryBtn = container.querySelector('#karaoke-retry-btn');
     if (retryBtn && currentSong) {
       retryBtn.addEventListener('click', function () { fetchKaraoke(currentSong.videoId); });
@@ -923,6 +941,37 @@ const MusicTab = (() => {
 
     var lyricsEl = container.querySelector('#karaoke-lyrics');
     if (lyricsEl) lyricsEl.addEventListener('click', handleKaraokeClick);
+  }
+
+  function musicExtractUniqueWords(text) {
+    var words = text.toLowerCase().split(/\s+/);
+    var seen = {};
+    var result = [];
+    for (var i = 0; i < words.length; i++) {
+      var clean = words[i].replace(/[^a-z']/g, '');
+      if (clean && clean.length > 1 && !seen[clean]) {
+        seen[clean] = true;
+        result.push(clean);
+      }
+    }
+    return result;
+  }
+
+  function musicTranslateWordList(words, callback) {
+    var result = [];
+    var idx = 0;
+    function next() {
+      if (idx >= words.length) { callback(result); return; }
+      var w = words[idx++];
+      Ai.translate(w, '').then(function(translation) {
+        result.push({ word: w, translation: translation || w });
+        next();
+      }).catch(function() {
+        result.push({ word: w, translation: w });
+        next();
+      });
+    }
+    next();
   }
 
   return { render: render, bindEvents: bindEvents };

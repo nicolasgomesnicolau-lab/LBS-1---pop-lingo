@@ -319,6 +319,7 @@ const MoviesTab = (() => {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 Just Heard
               </button>
+              <button class="chip chip-sm" id="study-movie-words-btn">📖 Estudar palavras</button>
             </div>
           </div>
 
@@ -611,8 +612,53 @@ const MoviesTab = (() => {
       }
     });
 
+    // Study movie words button
+    container.querySelector('#study-movie-words-btn')?.addEventListener('click', function() {
+      if (!currentClip || !currentClip.subtitles) return;
+      var allText = currentClip.subtitles.map(function(s) { return s.text; }).join(' ');
+      var uniqueWords = extractUniqueWords(allText);
+      if (uniqueWords.length === 0) { App.showToast('Nenhuma palavra encontrada nas legendas', 'error'); return; }
+      App.showToast('Traduzindo ' + uniqueWords.length + ' palavras...', 'info');
+      translateWordList(uniqueWords, function(translated) {
+        if (typeof StudyTab !== 'undefined' && StudyTab.startMediaSession) {
+          StudyTab.startMediaSession(translated, 'standard');
+        }
+      });
+    });
+
     bindSubtitleEvents(container);
     bindAdminEvents(container);
+  }
+
+  function extractUniqueWords(text) {
+    var words = text.toLowerCase().split(/\s+/);
+    var seen = {};
+    var result = [];
+    for (var i = 0; i < words.length; i++) {
+      var clean = words[i].replace(/[^a-z']/g, '');
+      if (clean && clean.length > 1 && !seen[clean]) {
+        seen[clean] = true;
+        result.push(clean);
+      }
+    }
+    return result;
+  }
+
+  function translateWordList(words, callback) {
+    var result = [];
+    var idx = 0;
+    function next() {
+      if (idx >= words.length) { callback(result); return; }
+      var w = words[idx++];
+      Ai.translate(w, '').then(function(translation) {
+        result.push({ word: w, translation: translation || w });
+        next();
+      }).catch(function() {
+        result.push({ word: w, translation: w });
+        next();
+      });
+    }
+    next();
   }
 
   function bindSubtitleEvents(container) {
