@@ -436,11 +436,19 @@ const MoviesTab = (() => {
         </div>
 
         <div class="card mb-lg" style="padding: var(--space-xl);">
-          <h3 style="font-size: var(--font-md); margin-bottom: var(--space-base);">🗑️ Gerenciar Séries</h3>
+          <h3 style="font-size: var(--font-md); margin-bottom: var(--space-base);">🗑️ Gerenciar Séries & Clips</h3>
           ${serverMovies.length > 0 ? serverMovies.map(m => `
-            <div class="flex-between mb-sm" style="padding: var(--space-sm) 0; border-bottom: 1px solid var(--border-color);">
-              <span style="font-weight: 600;">${escapeHtml(m.seriesName)} (${m.clips.length} clips)</span>
-              <button class="btn btn-sm btn-danger" data-delete-series="${m.id}">Deletar</button>
+            <div style="margin-bottom: var(--space-base); padding: var(--space-sm); border: 1px solid var(--border-color); border-radius: var(--radius-md);">
+              <div class="flex-between mb-sm">
+                <span style="font-weight: 600;">${escapeHtml(m.seriesName)} (${m.clips.length} clips)</span>
+                <button class="btn btn-sm btn-danger" data-delete-series="${m.id}">Deletar série</button>
+              </div>
+              ${m.clips.length > 0 ? m.clips.map(c => `
+                <div class="flex-between mb-xs" style="padding: 2px 0; font-size: var(--font-sm);">
+                  <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(c.title)}</span>
+                  <button class="btn btn-sm btn-danger" data-delete-clip="${c.id}" data-series-id="${m.id}" style="font-size:11px;padding:2px 8px">✕</button>
+                </div>
+              `).join('') : '<p style="color:var(--text-muted);font-size:var(--font-sm)">Nenhum clip.</p>'}
             </div>
           `).join('') : '<p style="color: var(--text-muted); font-size: var(--font-sm);">Nenhuma série criada.</p>'}
         </div>
@@ -777,6 +785,26 @@ const MoviesTab = (() => {
           saveMoviesToServer().then(function(json) {
             App.showToast(json.success ? 'Série deletada!' : 'Erro ao salvar', json.success ? 'success' : 'error');
             if (json.success) loadMovies().then(function() { App.refreshCurrentTab(); });
+          });
+        }
+      });
+    });
+
+    container.querySelectorAll('[data-delete-clip]').forEach(btn => {
+      btn.addEventListener('click', function() {
+        if (!confirm('Deletar este clip?')) return;
+        var seriesId = this.getAttribute('data-series-id');
+        var clipId = this.getAttribute('data-delete-clip');
+        var series = serverMovies.find(function(m) { return m.id === seriesId; });
+        if (!series) return;
+        var idx = series.clips.findIndex(function(c) { return c.id === clipId; });
+        if (idx === -1) return;
+        series.clips.splice(idx, 1);
+        saveMoviesToServer().then(function(json) {
+          App.showToast(json.success ? 'Clip deletado!' : 'Erro ao salvar', json.success ? 'success' : 'error');
+          if (json.success) loadMovies().then(function() { App.refreshCurrentTab(); });
+        });
+      });
     });
 
     container.querySelector('#admin-export-btn')?.addEventListener('click', () => {
@@ -804,9 +832,6 @@ const MoviesTab = (() => {
       } catch (e) {
         App.showToast('JSON inválido!', 'error');
       }
-    });
-  }
-      });
     });
   }
 
