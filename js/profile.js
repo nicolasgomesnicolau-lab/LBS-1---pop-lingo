@@ -39,9 +39,10 @@ const ProfileTab = (() => {
     return null;
   }
 
-  function generateLeaderboard(baseScore, currentUserEmail) {
+  function generateLeaderboard(userAchievements, currentUserEmail) {
     var players = [];
     var usedNames = {};
+    var totalAchievements = (typeof Achievements !== 'undefined') ? Achievements.ALL.length : 74;
 
     function pickName() {
       var available = FAKE_NAMES.filter(function(n) { return !usedNames[n]; });
@@ -52,35 +53,23 @@ const ProfileTab = (() => {
     }
 
     for (var i = 0; i < 40; i++) {
-      var variance = Math.floor(Math.random() * 600) - 300 + Math.floor(Math.random() * 200);
-      var score = Math.max(10, baseScore + variance);
+      var variance = Math.floor(Math.random() * 12) - 6;
+      var count = Math.max(1, Math.min(totalAchievements, userAchievements + variance));
       players.push({
         name: pickName(),
-        score: score,
+        achievements: count,
         avatar: FAKE_AVATARS[i % FAKE_AVATARS.length],
         isUser: false,
       });
     }
 
-    players.sort(function(a, b) { return b.score - a.score; });
+    players.sort(function(a, b) { return b.achievements - a.achievements; });
 
-    var userEntry = { name: currentUserEmail ? currentUserEmail.replace(/@.+/, '') : 'Visitante', score: baseScore, avatar: '🎯', isUser: true };
+    var userEntry = { name: currentUserEmail ? currentUserEmail.replace(/@.+/, '') : 'Visitante', achievements: userAchievements, avatar: '🎯', isUser: true };
     players.splice(Math.min(7, players.length), 0, userEntry);
-    players.sort(function(a, b) { return b.score - a.score; });
+    players.sort(function(a, b) { return b.achievements - a.achievements; });
 
     return players.slice(0, 20);
-  }
-
-  function getScoreForLeaderboard() {
-    var words = (typeof Store !== 'undefined' && Store.getWords) ? Store.getWords() : [];
-    var stats = (typeof Store !== 'undefined' && Store.getStudyStats) ? Store.getStudyStats() : { history: [] };
-    var totalCorrect = 0;
-    var totalWords = 0;
-    for (var i = 0; i < stats.history.length; i++) {
-      totalCorrect += stats.history[i].correct || 0;
-      totalWords += stats.history[i].wordsStudied || 0;
-    }
-    return totalCorrect * 10 + words.length * 15 + totalWords * 5;
   }
 
   function renderActivityGraph() {
@@ -200,8 +189,8 @@ const ProfileTab = (() => {
   function renderLeaderboard() {
     var user = (typeof Auth !== 'undefined' && Auth.getUser) ? Auth.getUser() : null;
     var email = user ? user.email : null;
-    var score = getScoreForLeaderboard();
-    var players = generateLeaderboard(score, email);
+    var userAchievements = (typeof Achievements !== 'undefined') ? Achievements.getCount() : 0;
+    var players = generateLeaderboard(userAchievements, email);
 
     var html = '<div class="profile-section">';
     html += '<div class="profile-section-header"><h2>🏆 Classificação</h2></div>';
@@ -221,20 +210,16 @@ const ProfileTab = (() => {
       else if (pos === 3) posHtml = '<div class="leaderboard-medal">🥉</div>';
       else posHtml = '<div class="leaderboard-pos">' + pos + '</div>';
 
-      var rankTitle = '';
-      if (typeof Achievements !== 'undefined') {
-        var rankObj = getUserRank(Math.floor(p.score / 100));
-        rankTitle = '<div class="leaderboard-rank-title">' + rankObj.label + '</div>';
-      }
+      var rankObj = (typeof Achievements !== 'undefined') ? getUserRank(p.achievements) : { label: '🥉 Bronze' };
 
       html += '<div class="' + itemClass + '">';
       html += posHtml;
       html += '<div class="' + avatarClass + '">' + p.avatar + '</div>';
       html += '<div class="leaderboard-info">';
       html += '<div class="' + nameClass + '">' + escapeHtml(p.name) + '</div>';
-      html += rankTitle;
+      html += '<div class="leaderboard-rank-title">' + rankObj.label + '</div>';
       html += '</div>';
-      html += '<div class="leaderboard-score"><strong>' + p.score + '</strong> pts</div>';
+      html += '<div class="leaderboard-score"><strong>' + p.achievements + '</strong> conquistas</div>';
       html += '</div>';
     }
 
