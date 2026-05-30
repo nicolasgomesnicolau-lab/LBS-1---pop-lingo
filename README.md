@@ -30,20 +30,33 @@ Ask questions in Portuguese about English words, phrases, or grammar. The AI res
 | **yt-search** (fallback) | Search YouTube when API quota is exceeded | — |
 | **OpenRouter** | AI translation & chat (via free models) | `OPENROUTER_KEY` |
 | **Jarvis Karaoke API** | AI-powered karaoke transcription from audio | `KARAOKE_NGROK` + `KARAOKE_API_KEY` |
-| **GitHub** | Deploy hosting & git-based persistence for movie data | `GITHUB_TOKEN` (optional, for auto-commit) |
+| **Supabase** | Authentication (JWT) & database for movies and user vocab | `SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY` |
 | **Render** | Web hosting | [render.com](https://render.com) |
 
 ---
 
-## Running Locally
+## Supabase Setup
 
-> ⚠️ The `.env` file with API keys is **not committed** to the repository. You need to create your own credentials.
+This app uses Supabase for authentication (JWT login) and shared data storage (movies + user vocabulary).
+
+1. Create a project at [supabase.com](https://supabase.com)
+2. Go to **SQL Editor** and run the script from [`supabase-init.sql`](./supabase-init.sql) to create the required tables
+3. In **Auth > Settings**, disable **"Confirm email"** so users can sign up without email verification
+4. Copy your project URL and anon key to `.env`:
+   ```env
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_PUBLISHABLE_KEY=your-anon-key
+   ```
+
+## Running with Docker
+
+> ⚠️ The `.env` file with API keys is **not committed** to the repository. You must provide your own credentials.
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (v18+)
-- A **Jarvis API** instance (see below)
+- [Docker](https://docker.com)
+- A **Jarvis API** instance for karaoke transcription ([repo](https://github.com/nicolasgomesnicolau-lab/LBS-1---API-JARVIS-for-POP-LINGO))
 
-### Setup
+### Quick Start
 
 1. **Clone the repo:**
    ```bash
@@ -51,43 +64,15 @@ Ask questions in Portuguese about English words, phrases, or grammar. The AI res
    cd LBS-1---pop-lingo
    ```
 
-2. **Install dependencies:**
+2. **Create your `.env` file** (copy from `.env.example` and fill in the keys)
+
+3. **Build and run:**
    ```bash
-   npm install
+   docker build -t pop-lingo .
+   docker run -p 8000:8000 --env-file .env pop-lingo
    ```
 
-3. **Create your `.env` file** (copy from `.env.example`):
-   ```env
-   YT_API_KEY=your_youtube_data_api_key
-   KARAOKE_NGROK=your_jarvis_ngrok_url
-   KARAOKE_API_KEY=your_jarvis_api_key
-   OPENROUTER_KEY=your_openrouter_api_key
-   ADMIN_PASSWORD=your_admin_password
-   GITHUB_TOKEN=your_github_token   # optional – enables auto-commit of movie data
-   ```
-
-4. **Run the Jarvis API** (required for karaoke transcription):
-   ```bash
-   # Clone the Jarvis API repository:
-   git clone https://github.com/nicolasgomesnicolau-lab/LBS-1---API-JARVIS-for-POP-LINGO
-   cd LBS-1---API-JARVIS-for-POP-LINGO
-   # Follow its setup instructions, then start it
-   # Update KARAOKE_NGROK in .env with the ngrok URL
-   ```
-
-5. **Start the app:**
-   ```bash
-   node server.js
-   ```
-
-6. Open **http://localhost:8000** in your browser.
-
-### Docker
-
-```bash
-docker build -t pop-lingo .
-docker run -p 8000:8000 --env-file .env pop-lingo
-```
+4. Open **http://localhost:8000** in your browser.
 
 ---
 
@@ -95,34 +80,37 @@ docker run -p 8000:8000 --env-file .env pop-lingo
 
 ```
 ├── server.js           # HTTP server: API routes + static files
+├── supabase.js         # Supabase client (auth + database)
 ├── dict.js             # Built-in English→Portuguese dictionary
 ├── dockerfile          # Docker build config
 ├── index.html          # Main SPA entry point
+├── supabase-init.sql   # SQL script to initialize Supabase tables
 ├── css/
-│   └── style.css       # App styles
+│   ├── index.css       # Global styles
+│   └── components.css  # Reusable UI components
 ├── js/
 │   ├── app.js          # App shell: tabs, router, UI helpers
+│   ├── auth.js         # Login/signup via Supabase JWT
 │   ├── ai.js           # Translation client (calls server /api/translate)
 │   ├── movies.js       # Movies tab: list, player, admin, server sync
 │   ├── music.js        # Music tab: search, YouTube player, karaoke
-│   ├── store.js        # localStorage data layer (vocab, settings, playlists)
+│   ├── store.js        # Data layer (localStorage + Supabase sync)
 │   └── chat.js         # Chat tab: messages, AI conversation
 ├── data/
-│   ├── movies.json     # Server-persisted movie library (tracked in git)
+│   ├── movies.json     # Local fallback for movie data
 │   └── karaoke_cache/  # Cached Jarvis transcriptions (gitignored)
-└── .env.example        # Template for local environment variables
+└── .env.example        # Template for environment variables
 ```
 
 ---
 
 ## Data Persistence
 
-- **`data/movies.json`** is committed to git. Movies added via the admin panel survive restarts and are kept on deploy if the file is **re-committed** before pushing new code.
+- **Movies & Vocab** are stored in **Supabase** (`movies_data` and `vocab_data` tables). Movies are visible to everyone; vocab is per-user (requires login).
+- **`data/movies.json`** is kept as a local fallback (synced from Supabase when available).
 - **`data/karaoke_cache/`** is gitignored. Transcriptions are regenerated on demand and cached server-side.
-- **User playlists, vocab, and settings** are stored in the browser's `localStorage`.
-- **Admin sessions** are in-memory (lost on server restart — you must re-authenticate).
-
-> 💡 **To keep movie data across deploys:** after adding/changing movies in the admin panel, use the **Export JSON** button in admin, then commit `data/movies.json` and push before deploying. Or set `GITHUB_TOKEN` in Render environment variables to auto-commit on every save.
+- **User playlists, music history, and settings** are stored in `localStorage`.
+- **Auth sessions** use Supabase JWT tokens stored in `localStorage`.
 
 ---
 
