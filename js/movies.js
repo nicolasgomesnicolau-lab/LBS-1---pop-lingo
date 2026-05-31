@@ -624,7 +624,15 @@ const MoviesTab = (() => {
       var allText = currentClip.subtitles.map(function(s) { return s.text; }).join(' ');
       var uniqueWords = extractUniqueWords(allText);
       if (uniqueWords.length === 0) { App.showToast('Nenhuma palavra encontrada nas legendas', 'error'); return; }
-      App.showToast('Traduzindo ' + uniqueWords.length + ' palavras...', 'info');
+      // Show translation progress bar
+      var subArea = document.getElementById('subtitle-area');
+      if (subArea) {
+        var prog = document.createElement('div');
+        prog.id = 'translation-progress';
+        prog.style.cssText = 'padding:var(--space-sm);text-align:center;font-size:var(--font-sm);color:var(--accent);background:rgba(99,102,241,0.1);border-radius:var(--radius-sm);margin-bottom:var(--space-sm)';
+        prog.textContent = 'Traduzindo: 0/' + uniqueWords.length;
+        subArea.parentNode.insertBefore(prog, subArea);
+      }
       translateWordList(uniqueWords, function(translated) {
         if (typeof StudyTab !== 'undefined' && StudyTab.startMediaSession) {
           StudyTab.startMediaSession(translated, 'standard', function(result) {
@@ -657,14 +665,25 @@ const MoviesTab = (() => {
   function translateWordList(words, callback) {
     var result = [];
     var idx = 0;
+    var total = words.length;
+    var progressEl = document.getElementById('translation-progress');
+    if (progressEl) progressEl.textContent = 'Traduzindo: 0/' + total;
     function next() {
-      if (idx >= words.length) { callback(result); return; }
-      var w = words[idx++];
+      if (idx >= words.length) {
+        if (progressEl) progressEl.textContent = 'Concluído!';
+        callback(result);
+        return;
+      }
+      var w = words[idx];
       Ai.translate(w, '').then(function(translation) {
         result.push({ word: w, translation: translation || w });
+        idx++;
+        if (progressEl) progressEl.textContent = 'Traduzindo: ' + idx + '/' + total;
         next();
       }).catch(function() {
         result.push({ word: w, translation: w });
+        idx++;
+        if (progressEl) progressEl.textContent = 'Traduzindo: ' + idx + '/' + total;
         next();
       });
     }

@@ -507,6 +507,25 @@ function doYouTubeVideoInfo(videoId) {
     return;
   }
 
+  if (method === 'POST' && url.pathname === '/api/auth/anonymous') {
+    if (!supabase) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: 'Supabase não configurado' }));
+      return;
+    }
+    supabase.auth.signInAnonymously().then(function(result) {
+      var r = result.data || {};
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: !!r.user,
+        user: r.user ? { id: r.user.id, email: null } : null,
+        session: r.session ? { access_token: r.session.access_token, refresh_token: r.session.refresh_token } : null,
+        error: result.error ? result.error.message : null
+      }));
+    });
+    return;
+  }
+
   if (method === 'GET' && url.pathname === '/api/auth/me') {
     if (!supabase) {
       res.writeHead(200, { 'Content-Type': 'application/json' });

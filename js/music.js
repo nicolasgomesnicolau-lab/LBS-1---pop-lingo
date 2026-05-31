@@ -930,7 +930,15 @@ const MusicTab = (() => {
         var allText = karaokeData.map(function(e) { return e.text; }).join(' ');
         var uniqueWords = musicExtractUniqueWords(allText);
         if (uniqueWords.length === 0) { App.showToast('Nenhuma palavra encontrada na letra', 'error'); return; }
-        App.showToast('Traduzindo ' + uniqueWords.length + ' palavras...', 'info');
+        // Show translation progress
+        var karaokeArea = document.getElementById('karaoke-lyrics') || document.getElementById('karaoke-status');
+        if (karaokeArea) {
+          var prog = document.createElement('div');
+          prog.id = 'translation-progress';
+          prog.style.cssText = 'padding:var(--space-sm);text-align:center;font-size:var(--font-sm);color:var(--accent);background:rgba(99,102,241,0.1);border-radius:var(--radius-sm);margin-bottom:var(--space-sm)';
+          prog.textContent = 'Traduzindo: 0/' + uniqueWords.length;
+          karaokeArea.parentNode.insertBefore(prog, karaokeArea);
+        }
         musicTranslateWordList(uniqueWords, function(translated) {
           if (typeof StudyTab !== 'undefined' && StudyTab.startMediaSession) {
             StudyTab.startMediaSession(translated, 'standard', function(result) {
@@ -969,14 +977,25 @@ const MusicTab = (() => {
   function musicTranslateWordList(words, callback) {
     var result = [];
     var idx = 0;
+    var total = words.length;
+    var progressEl = document.getElementById('translation-progress');
+    if (progressEl) progressEl.textContent = 'Traduzindo: 0/' + total;
     function next() {
-      if (idx >= words.length) { callback(result); return; }
-      var w = words[idx++];
+      if (idx >= words.length) {
+        if (progressEl) progressEl.textContent = 'Concluído!';
+        callback(result);
+        return;
+      }
+      var w = words[idx];
       Ai.translate(w, '').then(function(translation) {
         result.push({ word: w, translation: translation || w });
+        idx++;
+        if (progressEl) progressEl.textContent = 'Traduzindo: ' + idx + '/' + total;
         next();
       }).catch(function() {
         result.push({ word: w, translation: w });
+        idx++;
+        if (progressEl) progressEl.textContent = 'Traduzindo: ' + idx + '/' + total;
         next();
       });
     }

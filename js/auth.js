@@ -146,6 +146,8 @@ const Auth = (() => {
           loginBtn.textContent = mode === 'login' ? 'Entrar' : 'Criar Conta';
           if (json.success) {
             screen.classList.remove('active');
+            clearSession();
+            setSession({ access_token: json.session.access_token, user: json.user });
             syncAfterLogin();
             resolve(true);
           } else {
@@ -184,20 +186,41 @@ const Auth = (() => {
     });
   }
 
-  // Check session on load
+  // Check session on load — try anonymous if no valid session
   function init() {
     var token = getToken();
-    if (!token) return false;
-    fetch('/api/auth/me', {
-      headers: { 'Authorization': 'Bearer ' + token }
+    if (token) {
+      fetch('/api/auth/me', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      }).then(function(r) { return r.json(); }).then(function(json) {
+        if (json.user) {
+          syncAfterLogin();
+        } else {
+          clearSession();
+          tryAnonymous();
+        }
+      }).catch(function() { clearSession(); tryAnonymous(); });
+      return true;
+    }
+    tryAnonymous();
+    return false;
+  }
+
+  function tryAnonymous() {
+    fetch('/api/auth/anonymous', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
     }).then(function(r) { return r.json(); }).then(function(json) {
-      if (json.user) {
+      if (json.success && json.session) {
+        setSession({ access_token: json.session.access_token, user: { id: json.user.id, email: null } });
         syncAfterLogin();
-      } else {
-        clearSession();
       }
-    }).catch(function() { clearSession(); });
-    return true;
+    }).catch(function() {});
+  }
+
+  function isAnonymous() {
+    var user = getUser();
+    return !!user && !user.email;
   }
 
   return {
@@ -206,6 +229,7 @@ const Auth = (() => {
     login: login,
     logout: logout,
     isLoggedIn: isLoggedIn,
+    isAnonymous: isAnonymous,
     getToken: getToken,
     getUser: getUser,
     getSession: getSession,
