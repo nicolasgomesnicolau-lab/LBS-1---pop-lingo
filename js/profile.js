@@ -78,11 +78,19 @@ const ProfileTab = (() => {
   }
 
   function applyBgColor(color) {
-    document.documentElement.style.setProperty('--bg-primary', color);
     if (typeof Store !== 'undefined' && Store.updateSettings) {
       Store.updateSettings({ bgColor: color });
     }
-    // Update active chip
+    var avatar = document.querySelector('#profile-avatar-btn');
+    if (avatar) {
+      if (color) {
+        avatar.style.background = color;
+        avatar.style.border = '3px solid rgba(255,255,255,0.15)';
+      } else {
+        avatar.style.background = '';
+        avatar.style.border = '';
+      }
+    }
     var chips = document.querySelectorAll('.bg-color-chip');
     for (var i = 0; i < chips.length; i++) {
       chips[i].classList.toggle('active', chips[i].dataset.color === color);
@@ -347,7 +355,7 @@ const ProfileTab = (() => {
   function renderBgColorPicker() {
     var saved = getBgColor();
     var html = '<div class="profile-section">';
-    html += '<div class="profile-section-header"><h2>🎨 Cor de Fundo</h2></div>';
+    html += '<div class="profile-section-header"><h2>🎨 Cor do Avatar</h2></div>';
     html += '<div class="bg-color-grid" id="bg-color-grid">';
     for (var i = 0; i < BG_COLORS.length; i++) {
       var c = BG_COLORS[i];
@@ -418,7 +426,9 @@ const ProfileTab = (() => {
 
     // Profile Header
     html += '<div class="profile-header">';
-    html += '<div class="profile-avatar clickable" id="profile-avatar-btn">' + avatarDisplay + '</div>';
+    var bgColor = getBgColor();
+    var avatarStyle = bgColor ? 'style="background:' + bgColor + ';border:3px solid rgba(255,255,255,0.15)"' : '';
+    html += '<div class="profile-avatar clickable" id="profile-avatar-btn" ' + avatarStyle + '>' + avatarDisplay + '</div>';
     html += '<div class="profile-name">' + (email ? escapeHtml(email.replace(/@.+/, '')) : 'Visitante') + '</div>';
     html += '<div class="profile-rank-badge">' + rank.label + '</div>';
     html += '<div class="profile-rank-progress">';
