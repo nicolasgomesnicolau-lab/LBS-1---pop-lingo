@@ -1,9 +1,13 @@
-/* ========================================
-   LBS #1 — Profile Tab
-   ======================================== */
-
 const ProfileTab = (() => {
   var currentFilter = 'all';
+
+  var AVATAR_LIST = [
+    '😀','😎','🤓','🤩','🥳','😈','👻','💀','🤖','👽',
+    '🎃','😺','🙈','🦊','🐶','🐱','🦁','🐯','🐸','🐵',
+    '🐉','🦅','🐺','🦋','🐙','🦄','🐧','🦉','🐬','🦈',
+    '🌟','🎯','💪','🔥','🎸','🎨','🚀','🌈','🎭','🏆',
+    '💎','👑','⚡','🌙','☀️','🍀','🎲','🎪','🛸','🗿',
+  ];
 
   var FAKE_NAMES = [
     'João S.', 'Maria C.', 'Pedro A.', 'Ana L.', 'Carlos M.',
@@ -39,6 +43,20 @@ const ProfileTab = (() => {
     return null;
   }
 
+  function getAvatar() {
+    if (typeof Store !== 'undefined' && Store.getSettings) {
+      var s = Store.getSettings();
+      return s.avatar || null;
+    }
+    return null;
+  }
+
+  function setAvatar(emoji) {
+    if (typeof Store !== 'undefined' && Store.updateSettings) {
+      Store.updateSettings({ avatar: emoji });
+    }
+  }
+
   function generateLeaderboard(userAchievements, currentUserEmail) {
     var players = [];
     var usedNames = {};
@@ -65,7 +83,7 @@ const ProfileTab = (() => {
 
     players.sort(function(a, b) { return b.achievements - a.achievements; });
 
-    var userEntry = { name: currentUserEmail ? currentUserEmail.replace(/@.+/, '') : 'Visitante', achievements: userAchievements, avatar: '🎯', isUser: true };
+    var userEntry = { name: currentUserEmail ? currentUserEmail.replace(/@.+/, '') : 'Visitante', achievements: userAchievements, avatar: getAvatar() || '🎯', isUser: true };
     players.splice(Math.min(7, players.length), 0, userEntry);
     players.sort(function(a, b) { return b.achievements - a.achievements; });
 
@@ -227,6 +245,82 @@ const ProfileTab = (() => {
     return html;
   }
 
+  function renderRankProgression() {
+    if (typeof Achievements === 'undefined') return '';
+    var ranks = Achievements.RANKS;
+    if (!ranks || ranks.length === 0) return '';
+    var achievedCount = (typeof Achievements !== 'undefined') ? Achievements.getCount() : 0;
+
+    var html = '<div class="profile-section">';
+    html += '<div class="profile-section-header"><h2>📈 Progressão de Elos</h2></div>';
+    html += '<div class="rank-progression-card">';
+
+    for (var i = 0; i < ranks.length; i++) {
+      var r = ranks[i];
+      var nextMin = (i < ranks.length - 1) ? ranks[i + 1].min : Infinity;
+
+      var unlocked = achievedCount >= r.min;
+      var cls = 'rank-tier';
+      if (unlocked) cls += ' rank-unlocked';
+      if (r.id === getUserRank(achievedCount).id) cls += ' rank-current';
+      if (i === ranks.length - 1 && unlocked) cls += ' rank-maxed';
+
+      var needed = nextMin - achievedCount;
+      var neededLabel = '';
+      if (i === ranks.length - 1) {
+        neededLabel = unlocked ? '<span class="rank-needed rank-done">✅ Completo!</span>' : '<span class="rank-needed">' + (r.min - achievedCount) + ' conquistas</span>';
+      } else if (unlocked && achievedCount < nextMin) {
+        neededLabel = '<span class="rank-needed">' + needed + ' para ' + ranks[i + 1].label + '</span>';
+      } else if (unlocked) {
+        neededLabel = '<span class="rank-needed rank-done">✅ Desbloqueado</span>';
+      } else {
+        neededLabel = '<span class="rank-needed">' + (r.min - achievedCount) + ' conquistas</span>';
+      }
+
+      var progressFill = 0;
+      if (r.id === getUserRank(achievedCount).id && nextMin > r.min) {
+        progressFill = Math.min(100, Math.round((achievedCount - r.min) / (nextMin - r.min) * 100));
+      } else if (unlocked && nextMin > r.min) {
+        progressFill = 100;
+      } else if (unlocked && i === ranks.length - 1) {
+        progressFill = 100;
+      } else {
+        progressFill = Math.min(100, Math.round((achievedCount - r.min) / (nextMin - r.min) * 100));
+        if (progressFill < 0) progressFill = 0;
+      }
+
+      html += '<div class="' + cls + '">';
+      html += '<div class="rank-tier-header">';
+      html += '<span class="rank-tier-icon">' + r.label.split(' ')[0] + '</span>';
+      html += '<span class="rank-tier-name">' + r.label.replace(/^[^\s]+\s/, '') + '</span>';
+      html += '<span class="rank-tier-min">' + r.min + '+ conquistas</span>';
+      html += neededLabel;
+      html += '</div>';
+      html += '<div class="rank-tier-bar"><div class="rank-tier-fill" style="width:' + progressFill + '%"></div></div>';
+      html += '</div>';
+    }
+
+    html += '</div></div>';
+    return html;
+  }
+
+  function renderAvatarPicker() {
+    var html = '<div class="avatar-picker-overlay" id="avatar-picker-overlay">';
+    html += '<div class="avatar-picker-modal">';
+    html += '<div class="avatar-picker-header">';
+    html += '<h3>Escolha seu Avatar</h3>';
+    html += '<button class="avatar-picker-close" id="avatar-picker-close">&times;</button>';
+    html += '</div>';
+    html += '<div class="avatar-picker-grid">';
+    for (var i = 0; i < AVATAR_LIST.length; i++) {
+      html += '<div class="avatar-picker-option" data-avatar="' + AVATAR_LIST[i] + '">' + AVATAR_LIST[i] + '</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+
   function escapeHtml(str) {
     if (!str) return '';
     var div = document.createElement('div');
@@ -265,13 +359,14 @@ const ProfileTab = (() => {
 
     var user = (typeof Auth !== 'undefined' && Auth.getUser) ? Auth.getUser() : null;
     var email = user ? user.email : null;
-    var avatarLetter = getInitials(email);
+    var savedAvatar = getAvatar();
+    var avatarDisplay = savedAvatar || getInitials(email);
 
     var html = '';
 
     // Profile Header
     html += '<div class="profile-header">';
-    html += '<div class="profile-avatar">' + avatarLetter + '</div>';
+    html += '<div class="profile-avatar clickable" id="profile-avatar-btn">' + avatarDisplay + '</div>';
     html += '<div class="profile-name">' + (email ? escapeHtml(email.replace(/@.+/, '')) : 'Visitante') + '</div>';
     html += '<div class="profile-rank-badge">' + rank.label + '</div>';
     html += '<div class="profile-rank-progress">';
@@ -288,6 +383,9 @@ const ProfileTab = (() => {
     html += '<div class="profile-stat-item"><span class="profile-stat-icon">📅</span><div class="profile-stat-value">' + totalDays + '</div><div class="profile-stat-label">Dias</div></div>';
     html += '</div>';
 
+    // Rank Progression
+    html += renderRankProgression();
+
     // Activity Graph
     html += '<div class="profile-section">';
     html += '<div class="profile-section-header"><h2>📊 Atividade</h2></div>';
@@ -303,11 +401,59 @@ const ProfileTab = (() => {
     // Leaderboard
     html += renderLeaderboard();
 
+    // Avatar picker modal (hidden)
+    html += renderAvatarPicker();
+
     return html;
   }
 
   function bindEvents(container) {
     if (!container) return;
+
+    // Avatar button - open picker
+    var avatarBtn = container.querySelector('#profile-avatar-btn');
+    if (avatarBtn) {
+      avatarBtn.addEventListener('click', function() {
+        var overlay = document.getElementById('avatar-picker-overlay');
+        if (overlay) overlay.classList.add('visible');
+      });
+    }
+
+    // Close avatar picker
+    var closeBtn = container.querySelector('#avatar-picker-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function() {
+        var overlay = document.getElementById('avatar-picker-overlay');
+        if (overlay) overlay.classList.remove('visible');
+      });
+    }
+
+    // Click on overlay to close
+    var overlay = container.querySelector('#avatar-picker-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) overlay.classList.remove('visible');
+      });
+    }
+
+    // Avatar picker options
+    var options = container.querySelectorAll('.avatar-picker-option');
+    for (var k = 0; k < options.length; k++) {
+      options[k].addEventListener('click', function(e) {
+        var emoji = e.currentTarget.dataset.avatar;
+        if (emoji) {
+          setAvatar(emoji);
+          // Update avatar display
+          var avatarEl = document.querySelector('#profile-avatar-btn');
+          if (avatarEl) avatarEl.textContent = emoji;
+          // Close modal
+          var ov = document.getElementById('avatar-picker-overlay');
+          if (ov) ov.classList.remove('visible');
+          // Also update leaderboard user entry
+          updateLeaderboardAvatar(emoji);
+        }
+      });
+    }
 
     // Achievement filter chips
     var chips = container.querySelectorAll('.achievement-filter .chip');
@@ -317,14 +463,12 @@ const ProfileTab = (() => {
         var category = chip.dataset.category;
         currentFilter = category;
 
-        // Update active state
         var siblings = chip.parentElement.querySelectorAll('.chip');
         for (var j = 0; j < siblings.length; j++) {
           siblings[j].classList.remove('active');
         }
         chip.classList.add('active');
 
-        // Re-render achievements section (keep header, replace rest)
         var section = document.getElementById('profile-achievements-section');
         if (section) {
           var header = section.querySelector('.profile-section-header');
@@ -332,6 +476,13 @@ const ProfileTab = (() => {
           bindEvents(section);
         }
       });
+    }
+  }
+
+  function updateLeaderboardAvatar(emoji) {
+    var userItems = document.querySelectorAll('.leaderboard-item.is-user .leaderboard-avatar');
+    for (var i = 0; i < userItems.length; i++) {
+      userItems[i].textContent = emoji;
     }
   }
 
