@@ -63,6 +63,12 @@ const Auth = (() => {
   }
 
   function logout() {
+    // Sync everything before logout
+    if (typeof Store !== 'undefined') {
+      if (Store.syncVocabToServer) Store.syncVocabToServer();
+      if (Store.syncPlaylistToServer) Store.syncPlaylistToServer();
+      if (Store.syncTrackingToServer) Store.syncTrackingToServer();
+    }
     clearSession();
     var screen = document.getElementById('login-screen');
     if (screen) screen.classList.add('active');
@@ -78,11 +84,13 @@ const Auth = (() => {
     }
     if (typeof Store !== 'undefined' && Store.fetchTrackingFromServer) {
       Store.fetchTrackingFromServer().then(function() {
-        // Re-check achievements after tracking data is merged
         if (typeof Achievements !== 'undefined') {
           Achievements.checkAll(Achievements.getState());
         }
       });
+    }
+    if (typeof Store !== 'undefined' && Store.fetchPlaylistFromServer) {
+      Store.fetchPlaylistFromServer();
     }
   }
 

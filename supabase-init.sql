@@ -73,3 +73,20 @@ CREATE POLICY "Users can manage their own tracking"
   FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+-- Playlist data table (per-user music playlist for multi-device sync)
+CREATE TABLE IF NOT EXISTS playlist_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID UNIQUE NOT NULL,
+  data JSONB NOT NULL DEFAULT '[]'::jsonb,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE playlist_data ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own playlist" ON playlist_data;
+CREATE POLICY "Users can manage their own playlist"
+  ON playlist_data
+  FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);

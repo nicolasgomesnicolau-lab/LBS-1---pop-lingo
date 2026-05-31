@@ -312,12 +312,14 @@ const Store = (() => {
     if (exists) return { success: false, message: 'Música já está na playlist!' };
     list.push({ title: song.title, artist: song.artist, videoId: song.videoId });
     set(KEYS.PLAYLIST, list);
+    syncPlaylistToServer();
     return { success: true, message: 'Adicionada a playlist!' };
   }
 
   function removeFromPlaylist(title, artist) {
     const list = getPlaylist().filter(s => !(s.title === title && s.artist === artist));
     set(KEYS.PLAYLIST, list);
+    syncPlaylistToServer();
   }
 
   function isInPlaylist(title, artist) {
@@ -536,6 +538,33 @@ const Store = (() => {
     }).catch(function() {});
   }
 
+  // ---- Playlist Sync ----
+  function fetchPlaylistFromServer() {
+    return new Promise(function(resolve) {
+      var token = getAuthToken();
+      if (!token) { resolve(null); return; }
+      fetch('/api/playlist', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      }).then(function(r) { return r.json(); }).then(function(json) {
+        if (json.data && json.data.length > 0) {
+          set(KEYS.PLAYLIST, json.data);
+        }
+        resolve(json.data);
+      }).catch(function() { resolve(null); });
+    });
+  }
+
+  function syncPlaylistToServer() {
+    var token = getAuthToken();
+    if (!token) return;
+    var playlist = getPlaylist();
+    fetch('/api/playlist/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: token, playlist: playlist })
+    }).catch(function() {});
+  }
+
   // ---- Public API ----
   return {
     getWords,
@@ -580,6 +609,8 @@ const Store = (() => {
     syncVocabToServer,
     fetchTrackingFromServer,
     syncTrackingToServer,
+    fetchPlaylistFromServer,
+    syncPlaylistToServer,
 
     // Achievement tracking
     getTrack,
