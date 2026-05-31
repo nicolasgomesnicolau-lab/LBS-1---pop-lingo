@@ -940,12 +940,23 @@ const MusicTab = (() => {
           karaokeArea.parentNode.insertBefore(prog, karaokeArea);
         }
         musicTranslateWordList(uniqueWords, function(translated) {
-          if (typeof StudyTab !== 'undefined' && StudyTab.startMediaSession) {
-            StudyTab.startMediaSession(translated, 'standard', function(result) {
-              if (typeof Store !== 'undefined' && Store.recordSongStudyResult) {
-                Store.recordSongStudyResult(currentSong.title, currentSong.artist, result.correct, result.total);
+          var prog = document.getElementById('translation-progress');
+          if (prog) {
+            prog.textContent = '✅ ' + translated.length + ' palavras traduzidas';
+            var startBtn = document.createElement('button');
+            startBtn.className = 'btn btn-primary btn-sm mt-sm';
+            startBtn.textContent = '📖 Começar estudo';
+            startBtn.style.cssText = 'display:block;margin:var(--space-sm) auto 0';
+            startBtn.addEventListener('click', function() {
+              if (typeof StudyTab !== 'undefined' && StudyTab.startMediaSession) {
+                StudyTab.startMediaSession(translated, 'standard', function(result) {
+                  if (typeof Store !== 'undefined' && Store.recordSongStudyResult) {
+                    Store.recordSongStudyResult(currentSong.title, currentSong.artist, result.correct, result.total);
+                  }
+                });
               }
             });
+            prog.appendChild(startBtn);
           }
         });
       });

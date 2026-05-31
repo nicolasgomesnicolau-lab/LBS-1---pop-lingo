@@ -634,12 +634,23 @@ const MoviesTab = (() => {
         subArea.parentNode.insertBefore(prog, subArea);
       }
       translateWordList(uniqueWords, function(translated) {
-        if (typeof StudyTab !== 'undefined' && StudyTab.startMediaSession) {
-          StudyTab.startMediaSession(translated, 'standard', function(result) {
-            if (typeof Store !== 'undefined' && Store.recordMovieStudyResult) {
-              Store.recordMovieStudyResult(currentClip.id, currentClip.title, result.correct, result.total);
+        var prog = document.getElementById('translation-progress');
+        if (prog) {
+          prog.textContent = '✅ ' + translated.length + ' palavras traduzidas';
+          var startBtn = document.createElement('button');
+          startBtn.className = 'btn btn-primary btn-sm mt-sm';
+          startBtn.textContent = '📖 Começar estudo';
+          startBtn.style.cssText = 'display:block;margin:var(--space-sm) auto 0';
+          startBtn.addEventListener('click', function() {
+            if (typeof StudyTab !== 'undefined' && StudyTab.startMediaSession) {
+              StudyTab.startMediaSession(translated, 'standard', function(result) {
+                if (typeof Store !== 'undefined' && Store.recordMovieStudyResult) {
+                  Store.recordMovieStudyResult(currentClip.id, currentClip.title, result.correct, result.total);
+                }
+              });
             }
           });
+          prog.appendChild(startBtn);
         }
       });
     });
