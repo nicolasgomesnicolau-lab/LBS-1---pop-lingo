@@ -1,5 +1,6 @@
 const ProfileTab = (() => {
   var currentFilter = 'all';
+  var activityExpanded = false;
 
   var AVATAR_LIST = [
     '😀','😎','🤓','🤩','🥳','😈','👻','💀','🤖','👽',
@@ -7,6 +8,17 @@ const ProfileTab = (() => {
     '🐉','🦅','🐺','🦋','🐙','🦄','🐧','🦉','🐬','🦈',
     '🌟','🎯','💪','🔥','🎸','🎨','🚀','🌈','🎭','🏆',
     '💎','👑','⚡','🌙','☀️','🍀','🎲','🎪','🛸','🗿',
+  ];
+
+  var BG_COLORS = [
+    { label: 'Padrão', value: '#0a0f1a' },
+    { label: 'Roxo Escuro', value: '#0d061a' },
+    { label: 'Azul Marinho', value: '#06142e' },
+    { label: 'Vinho', value: '#1a0a0a' },
+    { label: 'Verde Escuro', value: '#0a1a0f' },
+    { label: 'Cinza Chumbo', value: '#121212' },
+    { label: 'Índigo', value: '#0a0a1a' },
+    { label: 'Marrom', value: '#1a120a' },
   ];
 
   var FAKE_NAMES = [
@@ -57,6 +69,26 @@ const ProfileTab = (() => {
     }
   }
 
+  function getBgColor() {
+    if (typeof Store !== 'undefined' && Store.getSettings) {
+      var s = Store.getSettings();
+      return s.bgColor || null;
+    }
+    return null;
+  }
+
+  function applyBgColor(color) {
+    document.documentElement.style.setProperty('--bg-primary', color);
+    if (typeof Store !== 'undefined' && Store.updateSettings) {
+      Store.updateSettings({ bgColor: color });
+    }
+    // Update active chip
+    var chips = document.querySelectorAll('.bg-color-chip');
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].classList.toggle('active', chips[i].dataset.color === color);
+    }
+  }
+
   function generateLeaderboard(userAchievements, currentUserEmail) {
     var players = [];
     var usedNames = {};
@@ -99,9 +131,10 @@ const ProfileTab = (() => {
       }
     }
 
-    var cells = [];
     var today = new Date();
     var dayLabels = ['D','S','T','Q','Q','S','S'];
+    var rows = activityExpanded ? 4 : 1;
+    var totalDays = rows * 7;
 
     var headerCells = '';
     headerCells += '<div class="activity-day-label"></div>';
@@ -109,8 +142,6 @@ const ProfileTab = (() => {
       headerCells += '<div class="activity-day-label">' + dayLabels[d] + '</div>';
     }
 
-    var rows = 4;
-    var totalDays = 28;
     var html = '';
     html += '<div class="activity-card">';
     html += '<div class="activity-headers">' + headerCells + '</div>';
@@ -129,9 +160,9 @@ const ProfileTab = (() => {
 
         var level = 0;
         if (count > 0) level = 1;
-        if (count >= 3) level = 2;
-        if (count >= 8) level = 3;
-        if (count >= 15) level = 4;
+        if (count >= 5) level = 2;
+        if (count >= 15) level = 3;
+        if (count >= 30) level = 4;
 
         var dayName = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][date.getDay()];
         var tooltip = dayName + ' ' + date.getDate() + '/' + (date.getMonth()+1) + ': ' + count + ' palavras';
@@ -151,6 +182,10 @@ const ProfileTab = (() => {
     }
     html += '<span>Mais</span>';
     html += '</div>';
+
+    var expandLabel = activityExpanded ? 'Mostrar menos' : 'Expandir para o mês';
+    html += '<button class="activity-expand-btn" id="activity-expand-btn">' + expandLabel + '</button>';
+
     html += '</div>';
 
     return html;
@@ -160,11 +195,9 @@ const ProfileTab = (() => {
     if (typeof Achievements === 'undefined') return '<div class="profile-empty"><div class="profile-empty-icon">🏆</div><h3>Sistema de conquistas não disponível</h3></div>';
 
     filter = filter || 'all';
-    var completed = Achievements.getCompleted();
     var list = Achievements.getCompletedList();
     var count = Achievements.getCount();
 
-    var categories = {};
     var catOrder = ['all', 'Vocabulário', 'Study', 'Sequência', 'Music', 'Movies', 'Especiais'];
     var catLabels = { all: 'Todos', Vocabulário: '📚 Vocab', Study: '🎯 Study', Sequência: '🔥 Dias', Music: '🎵 Music', Movies: '🎬 Movies', Especiais: '⭐ Especiais' };
 
@@ -175,7 +208,6 @@ const ProfileTab = (() => {
       filterHtml += '<div class="chip chip-sm' + activeClass + '" data-category="' + cat + '">' + catLabels[cat] + '</div>';
     }
     filterHtml += '</div>';
-
     filterHtml += '<div class="achievement-count">' + count + ' / ' + Achievements.ALL.length + ' conquistas</div>';
 
     var html = '<div class="achievement-grid">';
@@ -218,9 +250,6 @@ const ProfileTab = (() => {
       var p = players[i];
       var pos = i + 1;
       var isUser = p.isUser;
-      var itemClass = isUser ? 'leaderboard-item is-user' : 'leaderboard-item';
-      var nameClass = isUser ? 'leaderboard-name is-user' : 'leaderboard-name';
-      var avatarClass = isUser ? 'leaderboard-avatar is-user' : 'leaderboard-avatar';
 
       var posHtml = '';
       if (pos === 1) posHtml = '<div class="leaderboard-medal">🥇</div>';
@@ -230,11 +259,11 @@ const ProfileTab = (() => {
 
       var rankObj = (typeof Achievements !== 'undefined') ? getUserRank(p.achievements) : { label: '🥉 Bronze' };
 
-      html += '<div class="' + itemClass + '">';
+      html += '<div class="' + (isUser ? 'leaderboard-item is-user' : 'leaderboard-item') + '">';
       html += posHtml;
-      html += '<div class="' + avatarClass + '">' + p.avatar + '</div>';
+      html += '<div class="' + (isUser ? 'leaderboard-avatar is-user' : 'leaderboard-avatar') + '">' + p.avatar + '</div>';
       html += '<div class="leaderboard-info">';
-      html += '<div class="' + nameClass + '">' + escapeHtml(p.name) + '</div>';
+      html += '<div class="' + (isUser ? 'leaderboard-name is-user' : 'leaderboard-name') + '">' + escapeHtml(p.name) + '</div>';
       html += '<div class="leaderboard-rank-title">' + rankObj.label + '</div>';
       html += '</div>';
       html += '<div class="leaderboard-score"><strong>' + p.achievements + '</strong> conquistas</div>';
@@ -249,57 +278,82 @@ const ProfileTab = (() => {
     if (typeof Achievements === 'undefined') return '';
     var ranks = Achievements.RANKS;
     if (!ranks || ranks.length === 0) return '';
-    var achievedCount = (typeof Achievements !== 'undefined') ? Achievements.getCount() : 0;
+    var achievedCount = Achievements.getCount();
 
-    var html = '<div class="profile-section">';
-    html += '<div class="profile-section-header"><h2>📈 Progressão de Elos</h2></div>';
-    html += '<div class="rank-progression-card">';
+    var currentRank = getUserRank(achievedCount);
+    var nextRank = getNextRank(currentRank);
+    var nextMin = nextRank ? nextRank.min : ranks[ranks.length - 1].min;
+
+    var summaryHtml = '';
+    summaryHtml += '<div class="collapse-header" id="rank-toggle">';
+    summaryHtml += '<span>📈 Progressão de Elos</span>';
+    summaryHtml += '<span class="collapse-summary">' + currentRank.label + ' &middot; ' + achievedCount + ' conquistas</span>';
+    summaryHtml += '<span class="collapse-arrow">▶</span>';
+    summaryHtml += '</div>';
+
+    var bodyHtml = '<div class="collapse-body" id="rank-body">';
+    bodyHtml += '<div class="rank-progression-card">';
 
     for (var i = 0; i < ranks.length; i++) {
       var r = ranks[i];
-      var nextMin = (i < ranks.length - 1) ? ranks[i + 1].min : Infinity;
+      var nextMinRank = (i < ranks.length - 1) ? ranks[i + 1].min : Infinity;
 
       var unlocked = achievedCount >= r.min;
       var cls = 'rank-tier';
       if (unlocked) cls += ' rank-unlocked';
-      if (r.id === getUserRank(achievedCount).id) cls += ' rank-current';
+      if (r.id === currentRank.id) cls += ' rank-current';
       if (i === ranks.length - 1 && unlocked) cls += ' rank-maxed';
 
-      var needed = nextMin - achievedCount;
+      var needed = nextMinRank - achievedCount;
       var neededLabel = '';
       if (i === ranks.length - 1) {
-        neededLabel = unlocked ? '<span class="rank-needed rank-done">✅ Completo!</span>' : '<span class="rank-needed">' + (r.min - achievedCount) + ' conquistas</span>';
-      } else if (unlocked && achievedCount < nextMin) {
-        neededLabel = '<span class="rank-needed">' + needed + ' para ' + ranks[i + 1].label + '</span>';
+        neededLabel = unlocked ? '<span class="rank-needed rank-done">✅ Completo!</span>' : '<span class="rank-needed">' + (r.min - achievedCount) + ' faltam</span>';
+      } else if (unlocked && achievedCount < nextMinRank) {
+        neededLabel = '<span class="rank-needed">' + needed + ' para ' + ranks[i + 1].label.replace(/^[^\s]+\s/, '') + '</span>';
       } else if (unlocked) {
         neededLabel = '<span class="rank-needed rank-done">✅ Desbloqueado</span>';
       } else {
-        neededLabel = '<span class="rank-needed">' + (r.min - achievedCount) + ' conquistas</span>';
+        neededLabel = '<span class="rank-needed">' + (r.min - achievedCount) + ' faltam</span>';
       }
 
       var progressFill = 0;
-      if (r.id === getUserRank(achievedCount).id && nextMin > r.min) {
-        progressFill = Math.min(100, Math.round((achievedCount - r.min) / (nextMin - r.min) * 100));
-      } else if (unlocked && nextMin > r.min) {
+      if (r.id === currentRank.id && nextMinRank > r.min) {
+        progressFill = Math.min(100, Math.round((achievedCount - r.min) / (nextMinRank - r.min) * 100));
+      } else if (unlocked && nextMinRank > r.min) {
         progressFill = 100;
       } else if (unlocked && i === ranks.length - 1) {
         progressFill = 100;
       } else {
-        progressFill = Math.min(100, Math.round((achievedCount - r.min) / (nextMin - r.min) * 100));
+        progressFill = Math.min(100, Math.round((achievedCount - r.min) / (nextMinRank - r.min) * 100));
         if (progressFill < 0) progressFill = 0;
       }
 
-      html += '<div class="' + cls + '">';
-      html += '<div class="rank-tier-header">';
-      html += '<span class="rank-tier-icon">' + r.label.split(' ')[0] + '</span>';
-      html += '<span class="rank-tier-name">' + r.label.replace(/^[^\s]+\s/, '') + '</span>';
-      html += '<span class="rank-tier-min">' + r.min + '+ conquistas</span>';
-      html += neededLabel;
-      html += '</div>';
-      html += '<div class="rank-tier-bar"><div class="rank-tier-fill" style="width:' + progressFill + '%"></div></div>';
-      html += '</div>';
+      bodyHtml += '<div class="' + cls + '">';
+      bodyHtml += '<div class="rank-tier-header">';
+      bodyHtml += '<span class="rank-tier-icon">' + r.label.split(' ')[0] + '</span>';
+      bodyHtml += '<span class="rank-tier-name">' + r.label.replace(/^[^\s]+\s/, '') + '</span>';
+      bodyHtml += '<span class="rank-tier-min">' + r.min + '+</span>';
+      bodyHtml += neededLabel;
+      bodyHtml += '</div>';
+      bodyHtml += '<div class="rank-tier-bar"><div class="rank-tier-fill" style="width:' + progressFill + '%"></div></div>';
+      bodyHtml += '</div>';
     }
 
+    bodyHtml += '</div></div>';
+
+    return '<div class="profile-section collapse-section" id="rank-section">' + summaryHtml + bodyHtml + '</div>';
+  }
+
+  function renderBgColorPicker() {
+    var saved = getBgColor();
+    var html = '<div class="profile-section">';
+    html += '<div class="profile-section-header"><h2>🎨 Cor de Fundo</h2></div>';
+    html += '<div class="bg-color-grid" id="bg-color-grid">';
+    for (var i = 0; i < BG_COLORS.length; i++) {
+      var c = BG_COLORS[i];
+      var active = saved === c.value ? ' active' : '';
+      html += '<div class="bg-color-chip' + active + '" data-color="' + c.value + '" title="' + c.label + '" style="background:' + c.value + '"><span>' + (active ? '✓' : '') + '</span></div>';
+    }
     html += '</div></div>';
     return html;
   }
@@ -331,7 +385,6 @@ const ProfileTab = (() => {
   function render() {
     var words = (typeof Store !== 'undefined' && Store.getWords) ? Store.getWords() : [];
     var stats = (typeof Store !== 'undefined' && Store.getStudyStats) ? Store.getStudyStats() : { history: [] };
-    var todayStats = (typeof Store !== 'undefined' && Store.getTodayStats) ? Store.getTodayStats() : { correct: 0, wrong: 0, wordsStudied: 0 };
 
     var wordCount = words.length;
     var totalCorrect = 0;
@@ -348,7 +401,6 @@ const ProfileTab = (() => {
     var achievedCount = (typeof Achievements !== 'undefined') ? Achievements.getCount() : 0;
     var rank = getUserRank(achievedCount);
     var nextRank = getNextRank(rank);
-    var totalAchievements = (typeof Achievements !== 'undefined') ? Achievements.ALL.length : 38;
     var progressPct = nextRank ? Math.min(100, Math.round((achievedCount - rank.min) / (nextRank.min - rank.min) * 100)) : 100;
 
     var currentStreak = 0;
@@ -383,7 +435,10 @@ const ProfileTab = (() => {
     html += '<div class="profile-stat-item"><span class="profile-stat-icon">📅</span><div class="profile-stat-value">' + totalDays + '</div><div class="profile-stat-label">Dias</div></div>';
     html += '</div>';
 
-    // Rank Progression
+    // Cor de Fundo
+    html += renderBgColorPicker();
+
+    // Rank Progression (collapsible)
     html += renderRankProgression();
 
     // Activity Graph
@@ -443,15 +498,49 @@ const ProfileTab = (() => {
         var emoji = e.currentTarget.dataset.avatar;
         if (emoji) {
           setAvatar(emoji);
-          // Update avatar display
           var avatarEl = document.querySelector('#profile-avatar-btn');
           if (avatarEl) avatarEl.textContent = emoji;
-          // Close modal
           var ov = document.getElementById('avatar-picker-overlay');
           if (ov) ov.classList.remove('visible');
-          // Also update leaderboard user entry
           updateLeaderboardAvatar(emoji);
         }
+      });
+    }
+
+    // Rank toggle
+    var rankToggle = container.querySelector('#rank-toggle');
+    if (rankToggle) {
+      rankToggle.addEventListener('click', function() {
+        var body = document.getElementById('rank-body');
+        var arrow = this.querySelector('.collapse-arrow');
+        if (body) {
+          body.classList.toggle('open');
+          if (arrow) arrow.textContent = body.classList.contains('open') ? '▼' : '▶';
+        }
+      });
+    }
+
+    // Activity expand toggle
+    var expandBtn = container.querySelector('#activity-expand-btn');
+    if (expandBtn) {
+      expandBtn.addEventListener('click', function() {
+        activityExpanded = !activityExpanded;
+        // Re-render just the activity section
+        var section = this.closest('.profile-section');
+        if (section) {
+          var header = section.querySelector('.profile-section-header');
+          section.innerHTML = header ? header.outerHTML + renderActivityGraph() : renderActivityGraph();
+          bindEvents(section);
+        }
+      });
+    }
+
+    // Background color chips
+    var colorChips = container.querySelectorAll('.bg-color-chip');
+    for (var ci = 0; ci < colorChips.length; ci++) {
+      colorChips[ci].addEventListener('click', function(e) {
+        var color = e.currentTarget.dataset.color;
+        if (color) applyBgColor(color);
       });
     }
 

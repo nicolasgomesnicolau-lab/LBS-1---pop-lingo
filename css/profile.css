@@ -618,6 +618,118 @@
   box-shadow: 0 0 20px rgba(0, 220, 130, 0.3);
 }
 
+/* ---- Collapse Section ---- */
+.collapse-section .collapse-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.collapse-section .collapse-header:hover {
+  background: var(--bg-card-hover);
+}
+
+.collapse-section .collapse-header span:first-child {
+  font-weight: 700;
+  font-size: var(--font-md);
+}
+
+.collapse-section .collapse-summary {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.collapse-section .collapse-arrow {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+
+.collapse-section .collapse-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, margin 0.35s ease;
+  margin-top: 0;
+}
+
+.collapse-section .collapse-body.open {
+  max-height: 800px;
+  margin-top: var(--space-sm);
+}
+
+/* ---- Background Color Picker ---- */
+.bg-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.bg-color-chip {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bg-color-chip span {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.bg-color-chip.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(0, 220, 130, 0.3);
+  transform: scale(1.1);
+}
+
+.bg-color-chip.active span {
+  opacity: 1;
+}
+
+.bg-color-chip:hover {
+  transform: scale(1.15);
+  border-color: var(--text-secondary);
+}
+
+/* ---- Activity Expand Button ---- */
+.activity-expand-btn {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-md);
+  padding: var(--space-sm);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.activity-expand-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0, 220, 130, 0.05);
+}
+
 /* ---- Empty / No-data states ---- */
 .profile-empty {
   text-align: center;
