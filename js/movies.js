@@ -363,14 +363,20 @@ const MoviesTab = (() => {
         </div>
 
         <div class="clips-grid">
-          ${currentSeries.clips.map(clip => `
-            <div class="thumb-card" data-play-clip="${clip.id}" data-series-id="${currentSeries.id}">
-              <div class="thumb-img">
-                ${getYoutubeThumbnail(clip.videoUrl) ? `<img src="${getYoutubeThumbnail(clip.videoUrl)}" alt="${escapeHtml(clip.title)}" loading="lazy">` : `<div class="flex-center h-full" style="color: var(--text-muted); font-size: 24px;">🎬</div>`}
-              </div>
-              <div class="thumb-title">${escapeHtml(clip.title)}</div>
-            </div>
-          `).join('')}
+          ${currentSeries.clips.map(clip => {
+            var cs = (typeof Store !== 'undefined' && Store.getMovieStudyScore) ? Store.getMovieStudyScore(clip.id) : null;
+            var badge = '';
+            if (cs) {
+              badge = '<span class="badge ' + (cs.score >= 100 ? 'badge-success' : 'badge-warning') + '" style="font-size:10px;position:absolute;top:4px;right:4px;z-index:2">' + cs.score + '%</span>';
+            }
+            return '<div class="thumb-card" data-play-clip="' + clip.id + '" data-series-id="' + currentSeries.id + '">' +
+              '<div class="thumb-img" style="position:relative">' +
+              (getYoutubeThumbnail(clip.videoUrl) ? '<img src="' + getYoutubeThumbnail(clip.videoUrl) + '" alt="' + escapeHtml(clip.title) + '" loading="lazy">' : '<div class="flex-center h-full" style="color: var(--text-muted); font-size: 24px;">🎬</div>') +
+              badge +
+              '</div>' +
+              '<div class="thumb-title">' + escapeHtml(clip.title) + '</div>' +
+              '</div>';
+          }).join('')}
         </div>
       </div>
     `;
@@ -621,7 +627,11 @@ const MoviesTab = (() => {
       App.showToast('Traduzindo ' + uniqueWords.length + ' palavras...', 'info');
       translateWordList(uniqueWords, function(translated) {
         if (typeof StudyTab !== 'undefined' && StudyTab.startMediaSession) {
-          StudyTab.startMediaSession(translated, 'standard');
+          StudyTab.startMediaSession(translated, 'standard', function(result) {
+            if (typeof Store !== 'undefined' && Store.recordMovieStudyResult) {
+              Store.recordMovieStudyResult(currentClip.id, currentClip.title, result.correct, result.total);
+            }
+          });
         }
       });
     });

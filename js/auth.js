@@ -77,7 +77,12 @@ const Auth = (() => {
       Achievements.fetchFromServer();
     }
     if (typeof Store !== 'undefined' && Store.fetchTrackingFromServer) {
-      Store.fetchTrackingFromServer();
+      Store.fetchTrackingFromServer().then(function() {
+        // Re-check achievements after tracking data is merged
+        if (typeof Achievements !== 'undefined') {
+          Achievements.checkAll(Achievements.getState());
+        }
+      });
     }
   }
 

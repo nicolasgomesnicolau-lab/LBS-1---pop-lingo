@@ -71,6 +71,10 @@ const Achievements = (() => {
     { id: 'sessao_tarde', title: 'Sessão da Tarde', desc: 'Assista 3 vídeos no mesmo dia', icon: '🎬', category: 'Movies', check: function(s) { return s.dailyClipCount >= 3; } },
     { id: 'diretor_favorito', title: 'Diretor Favorito', desc: 'Assista 5 vídeos completos na mesma semana', icon: '🎬', category: 'Movies', check: function(s) { return s.weeklyClipCount >= 5; } },
     { id: 'legenda_viva', title: 'Legenda Viva', desc: 'Aprenda 20 palavras através dos vídeos', icon: '🎬', category: 'Movies', check: function(s) { return s.wordsFromMovies >= 20; } },
+    { id: 'estudante_filmes', title: 'Estudante de Cinema', desc: 'Complete o estudo de 1 clipe', icon: '🎬', category: 'Movies', check: function(s) { return s.studiedMoviesCount >= 1; } },
+    { id: 'critico', title: 'Crítico de Cinema', desc: 'Complete o estudo de 5 clipes', icon: '🎬', category: 'Movies', check: function(s) { return s.studiedMoviesCount >= 5; } },
+    { id: 'cineasta', title: 'Cineasta', desc: 'Complete o estudo de 10 clipes', icon: '🎬', category: 'Movies', check: function(s) { return s.studiedMoviesCount >= 10; } },
+    { id: 'perfeicao_visual', title: 'Perfeição Visual', desc: 'Acerte 100% em 3 clipes diferentes', icon: '🎬', category: 'Movies', check: function(s) { return s.perfectMovieCount >= 3; } },
     // ⭐ Especiais
     { id: 'explorer', title: 'Explorador', desc: 'Entre em todas as abas', icon: '⭐', category: 'Especiais', check: function(s) { return s.tabsVisited >= 6; } },
     { id: 'all_in_one_day', title: 'Tudo em Um Dia', desc: 'Use Music, Movies e Study no mesmo dia', icon: '⭐', category: 'Especiais', check: function(s) { return s.allInOneDay; } },
@@ -296,6 +300,17 @@ const Achievements = (() => {
       }
     }
 
+    // Movie study results
+    var movieResults = (typeof Store !== 'undefined' && Store.getMovieStudyResults) ? Store.getMovieStudyResults() : {};
+    var studiedMoviesCount = 0;
+    var perfectMovieCount = 0;
+    for (var mr in movieResults) {
+      if (movieResults[mr] && movieResults[mr].total > 0) {
+        studiedMoviesCount++;
+        if (movieResults[mr].score >= 100) perfectMovieCount++;
+      }
+    }
+
     // Study time today
     var dailyStudyMs = track.dailyStudyTimeMs || {};
     var studyMsToday = dailyStudyMs[today] || 0;
@@ -399,6 +414,8 @@ const Achievements = (() => {
       karaokeCompleted: karaokeCompleted,
       studiedSongsCount: studiedSongsCount,
       perfectSongCount: perfectSongCount,
+      studiedMoviesCount: studiedMoviesCount,
+      perfectMovieCount: perfectMovieCount,
       studyHourToday: studyHourToday,
       study3HoursWeek: study3HoursWeek,
       daysInMonth: daysInMonth,

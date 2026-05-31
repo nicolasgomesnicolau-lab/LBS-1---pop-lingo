@@ -11,7 +11,6 @@ const Store = (() => {
     SETTINGS: 'lbs_settings',
     PLAYLIST: 'lbs_playlist',
     ACHIEVEMENT_TRACK: 'lbs_achievement_track',
-    SONG_STUDY_RESULTS: 'lbs_song_study_results',
   };
 
   // ---- Helpers ----
@@ -223,23 +222,46 @@ const Store = (() => {
     }
   }
 
-  // ---- Song Study Results ----
+  // ---- Song / Movie Study Results (stored inside tracking data for auto-sync) ----
   function getSongStudyResults() {
-    return get(KEYS.SONG_STUDY_RESULTS) || {};
+    var t = getTrack();
+    return t.songStudyResults || {};
   }
 
   function recordSongStudyResult(title, artist, correct, total) {
+    var t = getTrack();
+    if (!t.songStudyResults) t.songStudyResults = {};
     var key = (title + '|' + artist).toLowerCase();
-    var results = getSongStudyResults();
-    results[key] = { correct: correct, total: total, score: total > 0 ? Math.round(correct / total * 100) : 0, date: new Date().toISOString() };
-    set(KEYS.SONG_STUDY_RESULTS, results);
-    syncTrackingToServer();
+    var existing = t.songStudyResults[key];
+    // Only update if better or new
+    if (!existing || correct > existing.correct) {
+      t.songStudyResults[key] = { correct: correct, total: total, score: total > 0 ? Math.round(correct / total * 100) : 0, date: new Date().toISOString() };
+      saveTrack(t);
+    }
   }
 
   function getSongStudyScore(title, artist) {
     var key = (title + '|' + artist).toLowerCase();
-    var results = getSongStudyResults();
-    return results[key] || null;
+    return (getTrack().songStudyResults || {})[key] || null;
+  }
+
+  function getMovieStudyResults() {
+    var t = getTrack();
+    return t.movieStudyResults || {};
+  }
+
+  function recordMovieStudyResult(clipId, clipTitle, correct, total) {
+    var t = getTrack();
+    if (!t.movieStudyResults) t.movieStudyResults = {};
+    var existing = t.movieStudyResults[clipId];
+    if (!existing || correct > existing.correct) {
+      t.movieStudyResults[clipId] = { title: clipTitle, correct: correct, total: total, score: total > 0 ? Math.round(correct / total * 100) : 0, date: new Date().toISOString() };
+      saveTrack(t);
+    }
+  }
+
+  function getMovieStudyScore(clipId) {
+    return (getTrack().movieStudyResults || {})[clipId] || null;
   }
 
   // ---- Study Stats ----
@@ -354,6 +376,8 @@ const Store = (() => {
         karaokeCompleted: false,
         musicThenStudy: false,
         lightning30s: false,
+        songStudyResults: {},
+        movieStudyResults: {},
       };
       set(KEYS.ACHIEVEMENT_TRACK, t);
     }
@@ -535,6 +559,9 @@ const Store = (() => {
     getSongStudyResults,
     recordSongStudyResult,
     getSongStudyScore,
+    getMovieStudyResults,
+    recordMovieStudyResult,
+    getMovieStudyScore,
 
     getStudyStats,
     recordStudyResult,
