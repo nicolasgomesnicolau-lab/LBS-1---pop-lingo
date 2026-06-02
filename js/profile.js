@@ -1,7 +1,13 @@
+// ============================================================
+// ProfileTab - Módulo responsável pela aba de perfil do usuário
+// Controle de avatar, conquistas, leaderboard, atividade e cores
+// ============================================================
 const ProfileTab = (() => {
-  var currentFilter = 'all';
-  var activityExpanded = false;
+  // Estado interno do módulo
+  var currentFilter = 'all';       // Filtro ativo da seção de conquistas
+  var activityExpanded = false;     // Controla se o gráfico de atividade está expandido
 
+  // Lista de emojis disponíveis para o avatar do usuário
   var AVATAR_LIST = [
     '😀','😎','🤓','🤩','🥳','😈','👻','💀','🤖','👽',
     '🎃','😺','🙈','🦊','🐶','🐱','🦁','🐯','🐸','🐵',
@@ -10,6 +16,7 @@ const ProfileTab = (() => {
     '💎','👑','⚡','🌙','☀️','🍀','🎲','🎪','🛸','🗿',
   ];
 
+  // Cores de fundo disponíveis para o círculo do avatar
   var BG_COLORS = [
     { label: 'Padrão', value: '#0a0f1a' },
     { label: 'Roxo Escuro', value: '#0d061a' },
@@ -21,6 +28,7 @@ const ProfileTab = (() => {
     { label: 'Marrom', value: '#1a120a' },
   ];
 
+  // Nomes fictícios usados para preencher o leaderboard
   var FAKE_NAMES = [
     'João S.', 'Maria C.', 'Pedro A.', 'Ana L.', 'Carlos M.',
     'Julia R.', 'Lucas F.', 'Beatriz N.', 'Rafael D.', 'Gabriela S.',
@@ -32,8 +40,10 @@ const ProfileTab = (() => {
     'Sandra C.', 'Renato L.', 'Priscila V.', 'Daniel G.', 'Monique P.',
   ];
 
+  // Avatares fictícios para os jogadores do leaderboard
   var FAKE_AVATARS = ['😀','😎','🤓','🌟','🎯','💪','🔥','🎸','🎨','🚀','🌈','🦁','🐉','🦅','🐺','🌸','🍀','🎭','🏆','💎'];
 
+  // Extrai as iniciais de um email (ex: "joao.silva@email.com" -> "JS")
   function getInitials(email) {
     if (!email) return '?';
     var parts = email.replace(/@.+/, '').split(/[._]/);
@@ -41,11 +51,13 @@ const ProfileTab = (() => {
     return email[0].toUpperCase();
   }
 
+  // Retorna o objeto rank (elo) do usuário com base no número de conquistas
   function getUserRank(achievedCount) {
     if (typeof Achievements !== 'undefined') return Achievements.getRank(achievedCount);
     return { id: 'bronze', label: '🥉 Bronze', min: 0 };
   }
 
+  // Encontra o próximo rank acima do atual
   function getNextRank(currentRank) {
     if (typeof Achievements === 'undefined') return null;
     var ranks = Achievements.RANKS;
@@ -55,6 +67,7 @@ const ProfileTab = (() => {
     return null;
   }
 
+  // Retorna o emoji do avatar salvo nas configurações do usuário
   function getAvatar() {
     if (typeof Store !== 'undefined' && Store.getSettings) {
       var s = Store.getSettings();
@@ -63,12 +76,14 @@ const ProfileTab = (() => {
     return null;
   }
 
+  // Salva o emoji escolhido como avatar nas configurações
   function setAvatar(emoji) {
     if (typeof Store !== 'undefined' && Store.updateSettings) {
       Store.updateSettings({ avatar: emoji });
     }
   }
 
+  // Retorna a cor de fundo salva nas configurações
   function getBgColor() {
     if (typeof Store !== 'undefined' && Store.getSettings) {
       var s = Store.getSettings();
@@ -77,6 +92,7 @@ const ProfileTab = (() => {
     return null;
   }
 
+  // Aplica a cor de fundo no avatar e atualiza a UI dos chips
   function applyBgColor(color) {
     if (typeof Store !== 'undefined' && Store.updateSettings) {
       Store.updateSettings({ bgColor: color });
@@ -97,6 +113,7 @@ const ProfileTab = (() => {
     }
   }
 
+  // Gera lista simulada de jogadores para o leaderboard, posicionando o usuário real entre eles
   function generateLeaderboard(userAchievements, currentUserEmail) {
     var players = [];
     var usedNames = {};
@@ -130,6 +147,7 @@ const ProfileTab = (() => {
     return players.slice(0, 20);
   }
 
+  // Renderiza o gráfico de atividade (calendário de contribuição) - 1 ou 4 semanas
   function renderActivityGraph() {
     var stats = (typeof Store !== 'undefined' && Store.getStudyStats) ? Store.getStudyStats() : { history: [] };
     var dateMap = {};
@@ -199,6 +217,7 @@ const ProfileTab = (() => {
     return html;
   }
 
+  // Renderiza a grade de conquistas com filtro por categoria
   function renderAchievements(filter) {
     if (typeof Achievements === 'undefined') return '<div class="profile-empty"><div class="profile-empty-icon">🏆</div><h3>Sistema de conquistas não disponível</h3></div>';
 
@@ -244,6 +263,7 @@ const ProfileTab = (() => {
     return filterHtml + html;
   }
 
+  // Renderiza a tabela de classificação (leaderboard) com jogadores fictícios + o usuário
   function renderLeaderboard() {
     var user = (typeof Auth !== 'undefined' && Auth.getUser) ? Auth.getUser() : null;
     var email = user ? user.email : null;
@@ -282,6 +302,7 @@ const ProfileTab = (() => {
     return html;
   }
 
+  // Renderiza a progressão de elos (collapsível), mostrando cada tier e a barra de progresso
   function renderRankProgression() {
     if (typeof Achievements === 'undefined') return '';
     var ranks = Achievements.RANKS;
@@ -352,6 +373,7 @@ const ProfileTab = (() => {
     return '<div class="profile-section collapse-section" id="rank-section">' + summaryHtml + bodyHtml + '</div>';
   }
 
+  // Renderiza o seletor de cor de fundo do avatar
   function renderBgColorPicker() {
     var saved = getBgColor();
     var html = '<div class="profile-section">';
@@ -366,6 +388,7 @@ const ProfileTab = (() => {
     return html;
   }
 
+  // Renderiza o modal (overlay) com a grade de avatares para o usuário escolher
   function renderAvatarPicker() {
     var html = '<div class="avatar-picker-overlay" id="avatar-picker-overlay">';
     html += '<div class="avatar-picker-modal">';
@@ -383,6 +406,7 @@ const ProfileTab = (() => {
     return html;
   }
 
+  // Escapa caracteres HTML para prevenir XSS
   function escapeHtml(str) {
     if (!str) return '';
     var div = document.createElement('div');
@@ -390,6 +414,7 @@ const ProfileTab = (() => {
     return div.innerHTML;
   }
 
+  // Função principal: monta todo o HTML da aba de perfil
   function render() {
     var words = (typeof Store !== 'undefined' && Store.getWords) ? Store.getWords() : [];
     var stats = (typeof Store !== 'undefined' && Store.getStudyStats) ? Store.getStudyStats() : { history: [] };
@@ -424,137 +449,45 @@ const ProfileTab = (() => {
 
     var html = '';
 
-    // Profile Header
-    html += '<div class="profile-header">';
-    var bgColor = getBgColor();
-    var avatarStyle = bgColor ? 'style="background:' + bgColor + ';border:3px solid rgba(255,255,255,0.15)"' : '';
-    html += '<div class="profile-avatar clickable" id="profile-avatar-btn" ' + avatarStyle + '>' + avatarDisplay + '</div>';
-    html += '<div class="profile-name">' + (email ? escapeHtml(email.replace(/@.+/, '')) : 'Visitante') + '</div>';
-    html += '<div class="profile-rank-badge">' + rank.label + '</div>';
-    html += '<div class="profile-rank-progress">';
-    html += '<div class="profile-rank-labels"><span>' + rank.label.replace(/^[^\s]+\s/, '') + '</span><span>' + (nextRank ? nextRank.label.replace(/^[^\s]+\s/, '') : 'MAX') + '</span></div>';
-    html += '<div class="progress-bar"><div class="progress-bar-fill" style="width:' + progressPct + '%"></div></div>';
-    html += '<div class="profile-rank-labels"><span>' + achievedCount + ' conquistas</span><span>' + (nextRank ? nextRank.min + ' necessários' : 'Completo!') + '</span></div>';
-    html += '</div></div>';
+    // Profile Header - avatar, nome, rank e barra de progresso
 
-    // Stats Grid
-    html += '<div class="profile-stats">';
-    html += '<div class="profile-stat-item"><span class="profile-stat-icon">📚</span><div class="profile-stat-value">' + wordCount + '</div><div class="profile-stat-label">Palavras</div></div>';
-    html += '<div class="profile-stat-item"><span class="profile-stat-icon">🔥</span><div class="profile-stat-value">' + currentStreak + '</div><div class="profile-stat-label">Sequência</div></div>';
-    html += '<div class="profile-stat-item"><span class="profile-stat-icon">🎯</span><div class="profile-stat-value">' + totalCorrect + '</div><div class="profile-stat-label">Acertos</div></div>';
-    html += '<div class="profile-stat-item"><span class="profile-stat-icon">📅</span><div class="profile-stat-value">' + totalDays + '</div><div class="profile-stat-label">Dias</div></div>';
-    html += '</div>';
+    // Stats Grid - palavras, sequência, acertos, dias
 
-    // Cor de Fundo
-    html += renderBgColorPicker();
+    // Cor de Fundo - seletor de cor do avatar
 
-    // Rank Progression (collapsible)
-    html += renderRankProgression();
+    // Rank Progression - seção colapsável de elos
 
-    // Activity Graph
-    html += '<div class="profile-section">';
-    html += '<div class="profile-section-header"><h2>📊 Atividade</h2></div>';
-    html += renderActivityGraph();
-    html += '</div>';
+    // Activity Graph - calendário de atividade diária
 
-    // Achievements
-    html += '<div class="profile-section" id="profile-achievements-section">';
-    html += '<div class="profile-section-header"><h2>🏆 Conquistas</h2></div>';
-    html += renderAchievements(currentFilter);
-    html += '</div>';
+    // Achievements - grade de conquistas com filtro
 
-    // Leaderboard
-    html += renderLeaderboard();
+    // Leaderboard - tabela de classificação
 
-    // Avatar picker modal (hidden)
+    // Avatar picker modal (hidden) - overlay para escolher avatar
     html += renderAvatarPicker();
 
     return html;
   }
 
+  // Conecta os event listeners aos elementos do DOM após a renderização
   function bindEvents(container) {
     if (!container) return;
 
-    // Avatar button - open picker
-    var avatarBtn = container.querySelector('#profile-avatar-btn');
-    if (avatarBtn) {
-      avatarBtn.addEventListener('click', function() {
-        var overlay = document.getElementById('avatar-picker-overlay');
-        if (overlay) overlay.classList.add('visible');
-      });
-    }
+    // Avatar button - abre o seletor de avatar ao clicar
 
-    // Close avatar picker
-    var closeBtn = container.querySelector('#avatar-picker-close');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', function() {
-        var overlay = document.getElementById('avatar-picker-overlay');
-        if (overlay) overlay.classList.remove('visible');
-      });
-    }
+    // Fecha o modal do seletor de avatar pelo botão X
 
-    // Click on overlay to close
-    var overlay = container.querySelector('#avatar-picker-overlay');
-    if (overlay) {
-      overlay.addEventListener('click', function(e) {
-        if (e.target === overlay) overlay.classList.remove('visible');
-      });
-    }
+    // Fecha o modal clicando fora (no overlay)
 
-    // Avatar picker options
-    var options = container.querySelectorAll('.avatar-picker-option');
-    for (var k = 0; k < options.length; k++) {
-      options[k].addEventListener('click', function(e) {
-        var emoji = e.currentTarget.dataset.avatar;
-        if (emoji) {
-          setAvatar(emoji);
-          var avatarEl = document.querySelector('#profile-avatar-btn');
-          if (avatarEl) avatarEl.textContent = emoji;
-          var ov = document.getElementById('avatar-picker-overlay');
-          if (ov) ov.classList.remove('visible');
-          updateLeaderboardAvatar(emoji);
-        }
-      });
-    }
+    // Cada opção de avatar: salva e atualiza na UI
 
-    // Rank toggle
-    var rankToggle = container.querySelector('#rank-toggle');
-    if (rankToggle) {
-      rankToggle.addEventListener('click', function() {
-        var body = document.getElementById('rank-body');
-        var arrow = this.querySelector('.collapse-arrow');
-        if (body) {
-          body.classList.toggle('open');
-          if (arrow) arrow.textContent = body.classList.contains('open') ? '▼' : '▶';
-        }
-      });
-    }
+    // Expande/recolhe a seção de progressão de elos
 
-    // Activity expand toggle
-    var expandBtn = container.querySelector('#activity-expand-btn');
-    if (expandBtn) {
-      expandBtn.addEventListener('click', function() {
-        activityExpanded = !activityExpanded;
-        // Re-render just the activity section
-        var section = this.closest('.profile-section');
-        if (section) {
-          var header = section.querySelector('.profile-section-header');
-          section.innerHTML = header ? header.outerHTML + renderActivityGraph() : renderActivityGraph();
-          bindEvents(section);
-        }
-      });
-    }
+    // Alterna entre 1 e 4 semanas no gráfico de atividade, re-renderizando apenas essa seção
 
-    // Background color chips
-    var colorChips = container.querySelectorAll('.bg-color-chip');
-    for (var ci = 0; ci < colorChips.length; ci++) {
-      colorChips[ci].addEventListener('click', function(e) {
-        var color = e.currentTarget.dataset.color;
-        if (color) applyBgColor(color);
-      });
-    }
+    // Aplica a cor de fundo ao clicar num chip de cor
 
-    // Achievement filter chips
+    // Filtro de categorias de conquistas: atualiza a grid e re-binda eventos
     var chips = container.querySelectorAll('.achievement-filter .chip');
     for (var i = 0; i < chips.length; i++) {
       chips[i].addEventListener('click', function(e) {
@@ -578,6 +511,7 @@ const ProfileTab = (() => {
     }
   }
 
+  // Atualiza o avatar do usuário no leaderboard sem re-renderizar tudo
   function updateLeaderboardAvatar(emoji) {
     var userItems = document.querySelectorAll('.leaderboard-item.is-user .leaderboard-avatar');
     for (var i = 0; i < userItems.length; i++) {
