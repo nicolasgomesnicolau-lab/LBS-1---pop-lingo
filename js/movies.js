@@ -702,8 +702,9 @@ const MoviesTab = (() => {
   }
 
   function bindSubtitleEvents(container) {
-    // Use event delegation: single listener no container captura clicks em .word e .word-censored
+    console.log('[DELEGATE] bindSubtitleEvents called, container id:', container.id, 'class:', container.className);
     container.addEventListener('click', (e) => {
+      console.log('[DELEGATE] container click fired, target:', e.target.className, 'path:', e.composedPath ? e.composedPath().map(x => x.className || x.id || x.tagName).join(' > ') : 'no composedPath');
       var wordEl = e.target.closest('.word');
       if (wordEl) {
         var word = wordEl.dataset.word;
