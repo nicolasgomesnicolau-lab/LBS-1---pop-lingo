@@ -8,23 +8,21 @@ on:
 jobs:
   zap_scan:
     runs-on: ubuntu-latest
-    name: Scan de Segurança Dinâmico (DAST)
-    permissions:
-      contents: read
-      issues: write
-      actions: write
     steps:
-      - name: Checkout do código
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: 'https://lbs-1-pop-lingo.onrender.com'
+          # Adicionamos isso para o ZAP não tentar criar o arquivo zap.yaml que causa o erro
+          cmd_options: '-z "-configfile /dev/null"' 
           fail_action: false
 
-      - name: Upload do Relatório
+      - name: Upload Report
         uses: actions/upload-artifact@v4
+        if: always() # Isso garante que o upload rode mesmo que o scan dê erro
         with:
           name: security-report
           path: report_html.html
