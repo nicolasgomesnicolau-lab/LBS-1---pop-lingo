@@ -9,7 +9,7 @@ jobs:
   dast:
     runs-on: ubuntu-latest
     permissions:
-      issues: write      # necessário para criar issues com os alertas
+      issues: write
       contents: read
 
     steps:
@@ -21,5 +21,16 @@ jobs:
         with:
           target: 'https://lbs-1-pop-lingo.onrender.com'
           fail_action: false
-          artifact_name: 'zap-scan-report'   # hífen em vez de underline
-          issue_title: 'ZAP Scan Baseline'
+          create_issue: false        # desabilita criação de issues automáticas
+          allow_issue_writing: false # não cria nem atualiza issues
+        continue-on-error: true      # não falha o pipeline por causa do artifact
+
+      - name: Upload ZAP Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: |
+            report_html.html
+            report_md.md
+            report_json.json
+          if-no-files-found: warn
