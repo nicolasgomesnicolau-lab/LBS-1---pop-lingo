@@ -2,13 +2,15 @@ name: DAST Scan
 
 on:
   push:
-    branches: [ main ] # Roda toda vez que você atualizar o código
-  workflow_dispatch: # Permite que você rode manualmente clicando num botão no GitHub
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   zap_scan:
     runs-on: ubuntu-latest
     name: Scan de Segurança Dinâmico (DAST)
+    permissions:
+      contents: read
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
@@ -16,5 +18,12 @@ jobs:
       - name: ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
-          target: 'https://lbs-1-pop-lingo.onrender.com' # Seu link do Render
-          fail_action: false # Se encontrar erro, não trava o build (para começar)
+          target: 'https://lbs-1-pop-lingo.onrender.com'
+          issue_links: false # Isso impede que ele crie Issues e evita aquele erro
+          fail_action: false # O build não para se achar avisos
+
+      - name: Upload do Relatório
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: report_html.html # O relatório que o ZAP gera
