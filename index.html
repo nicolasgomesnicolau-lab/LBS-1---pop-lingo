@@ -62,6 +62,18 @@
     </nav>
   </main>
 
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('click', function(e) {
+      var w = e.target.closest('.word');
+      if (w) {
+        console.log('[GLOBAL] .word clicked:', w.dataset.word, 'target:', e.target, 'target tag:', e.target.tagName);
+        alert('CLICOU: ' + w.dataset.word);
+      }
+    });
+  });
+  </script>
+
   <!-- Global Elements -->
 
   <!-- Toast Container -->
