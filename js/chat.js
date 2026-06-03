@@ -137,8 +137,6 @@ const ChatTab = (() => {
       var tabEl = document.getElementById('tab-chat');
       tabEl.innerHTML = render();
       bindEvents(tabEl);
-      container = document.querySelector('.chat-messages');
-      if (container) addLoading();
     }
 
     var word = extractWordFromInput(clean);
@@ -158,10 +156,12 @@ const ChatTab = (() => {
       Ai.chat(messages).then(function(result) {
         isLoading = false;
         removeLoading();
-        var botText = result.error ? 'Erro: ' + escapeHtml(result.error) : (result.text || '...');
+        var rawText = result.text || '...';
+        var safeText = result.error ? 'Erro: ' + escapeHtml(result.error) : escapeHtml(rawText);
+        var botText = safeText;
         var extraWord = extractWordFromInput(clean);
         if (extraWord && !result.error) {
-          var m = botText.match(/[""'']([^""'']+)[""'']/);
+          var m = rawText.match(/[""'']([^""'']+)[""'']/);
           var extraTrans = m ? m[1] : null;
           if (extraTrans && extraTrans.toLowerCase() !== extraWord.toLowerCase()) {
             botText += '<br><br>' + renderTranslateResult(extraWord, extraTrans);

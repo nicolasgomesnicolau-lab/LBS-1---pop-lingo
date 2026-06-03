@@ -246,7 +246,8 @@ const MusicTab = (() => {
     var container = document.getElementById('yt-player-host');
     if (!container) return;
     container.innerHTML = '';
-    var src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&controls=0&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3';
+    var safeId = videoId.replace(/[^a-zA-Z0-9_-]/g, '');
+    var src = 'https://www.youtube.com/embed/' + safeId + '?autoplay=1&controls=0&modestbranding=1&playsinline=1&rel=0&iv_load_policy=3';
     if (startSeconds > 0) src += '&start=' + Math.floor(startSeconds);
     var iframe = document.createElement('iframe');
     iframe.src = src;
@@ -272,7 +273,6 @@ const MusicTab = (() => {
   }
 
   function handleKaraokeClick(e) {
-    console.log('[MUSIC] karaoke click, target:', e.target.className, 'closest .word:', e.target.closest('.word')?.getAttribute('data-word'));
     try {
       var wordEl = e.target.closest('.word');
       if (wordEl) {
@@ -385,7 +385,7 @@ const MusicTab = (() => {
     var html = '';
     for (var i = 0; i < karaokeData.length; i++) {
       var entry = karaokeData[i];
-      var text = heardMode ? entry.text.replace(/[a-zA-Z0-9]/g, '●').replace(/'/g, "'") : entry.text;
+      var text = heardMode ? entry.text.replace(/[a-zA-Z0-9]/g, '●') : entry.text;
       var cls = 'karaoke-line';
       if (i === currentPhraseIdx) cls += ' karaoke-active';
       if (heardMode) {

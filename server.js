@@ -862,11 +862,18 @@ function doYouTubeVideoInfo(videoId) {
   }
 
   function extractAllJsonScripts(html) {
-    var scripts = html.match(/<script[^>]*>([\s\S]*?)<\/script>/g) || [];
     var all = [];
-    for (var si = 0; si < scripts.length; si++) {
-      var content = scripts[si].replace(/^<script[^>]*>/, '').replace(/<\/script>$/, '').trim();
-      if (!content) continue;
+    var idx = 0;
+    while (true) {
+      var scriptStart = html.indexOf('<script', idx);
+      if (scriptStart === -1) break;
+      var tagEnd = html.indexOf('>', scriptStart);
+      if (tagEnd === -1) break;
+      var contentStart = tagEnd + 1;
+      var scriptEnd = html.indexOf('</script>', contentStart);
+      if (scriptEnd === -1) break;
+      var content = html.slice(contentStart, scriptEnd).trim();
+      if (!content) { idx = scriptEnd + 9; continue; }
       if (content.charAt(0) === '{' || content.charAt(0) === '[') {
         try { all.push(JSON.parse(content)); } catch(e) {}
       } else if (content.indexOf('window.__INITIAL_STATE__') !== -1 || content.indexOf('window.__remixContext') !== -1) {
@@ -876,6 +883,7 @@ function doYouTubeVideoInfo(videoId) {
           try { all.push(JSON.parse(jsonStr)); } catch(e) {}
         }
       }
+      idx = scriptEnd + 9;
     }
     return all;
   }

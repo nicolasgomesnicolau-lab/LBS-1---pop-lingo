@@ -129,7 +129,7 @@ const MoviesTab = (() => {
 
   function movieTogglePlay() {
     if (!movieYTPlayer) return;
-    if (movieYTPlayer.getPlayerState() === YT.PlayerState.PLAYING) {
+    if (movieIsPlaying) {
       movieYTPlayer.pauseVideo();
     } else {
       movieYTPlayer.playVideo();
@@ -702,9 +702,7 @@ const MoviesTab = (() => {
   }
 
   function bindSubtitleEvents(container) {
-    console.log('[DELEGATE] bindSubtitleEvents called, container id:', container.id, 'class:', container.className);
     container.addEventListener('click', (e) => {
-      console.log('[DELEGATE] container click fired, target:', e.target.className, 'path:', e.composedPath ? e.composedPath().map(x => x.className || x.id || x.tagName).join(' > ') : 'no composedPath');
       var wordEl = e.target.closest('.word');
       if (wordEl) {
         var word = wordEl.dataset.word;

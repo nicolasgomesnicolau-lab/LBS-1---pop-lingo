@@ -101,11 +101,6 @@
   width: 100%;
   height: 100%;
   border: none;
-  pointer-events: none;
-}
-
-#movie-play-btn, #movie-skip-back, #movie-skip-fwd, #movie-seekbar {
-  pointer-events: all;
 }
 
 .subtitle-controls {
