@@ -192,6 +192,8 @@ http.createServer((req, res) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
 
   if (method === 'OPTIONS') {
     res.writeHead(204);
@@ -1013,7 +1015,7 @@ function doYouTubeVideoInfo(videoId) {
       'Referrer-Policy': 'strict-origin-when-cross-origin',
     };
     if (ext === '.html') {
-      headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src https://www.youtube.com; img-src 'self' https://img.youtube.com data:; connect-src 'self' https://openrouter.ai";
+      headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src https://www.youtube.com; img-src 'self' https://img.youtube.com data:; connect-src 'self' https://openrouter.ai; frame-ancestors 'self'; form-action 'self'";
     }
     res.writeHead(200, headers);
     res.end(data);

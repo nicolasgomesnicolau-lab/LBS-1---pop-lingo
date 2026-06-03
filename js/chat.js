@@ -135,7 +135,26 @@ const ChatTab = (() => {
       }
     } else {
       var tabEl = document.getElementById('tab-chat');
-      tabEl.innerHTML = render();
+      tabEl.innerHTML = '<div class="tab-header">' +
+        '<div class="tab-header-icon">💬</div>' +
+        '<div class="tab-header-text"><h1>Chat IA</h1><p>Seu assistente de ingles</p></div></div>' +
+        '<div class="chat-container"><div class="chat-messages"></div></div>' +
+        '<div class="chat-input-area">' +
+        '<input type="text" class="input-field" id="chat-input" placeholder="Digite uma palavra ou duvida..."' + (isLoading ? ' disabled' : '') + '>' +
+        '<button class="chat-send-btn" id="chat-send-btn"' + (isLoading ? ' disabled' : '') + '>' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button></div>';
+      for (var mi = 0; mi < messages.length; mi++) {
+        appendMessage(messages[mi].role, messages[mi].role === 'user' ? escapeHtml(messages[mi].content) : messages[mi].content);
+      }
+      if (isLoading) {
+        var chatMessages = tabEl.querySelector('.chat-messages');
+        if (chatMessages) {
+          var loadingBubble = document.createElement('div');
+          loadingBubble.className = 'chat-bubble chat-bubble-bot chat-loading';
+          loadingBubble.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+          chatMessages.appendChild(loadingBubble);
+        }
+      }
       bindEvents(tabEl);
     }
 
