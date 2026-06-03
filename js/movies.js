@@ -702,39 +702,33 @@ const MoviesTab = (() => {
   }
 
   function bindSubtitleEvents(container) {
-    const words = container.querySelectorAll('.word');
-    console.log('[MOVIES] bindSubtitleEvents:', words.length, 'words found');
-    words.forEach(el => {
-      el.addEventListener('click', (e) => {
-        console.log('[MOVIES] CLICK detected on word:', el.dataset.word, 'target:', e.target.className);
-        const word = el.dataset.word;
-        if (word) showWordTranslation(word, el.closest('.subtitle-line'));
-      });
-    });
-
-    // Censored word reveal
-    container.querySelectorAll('.word-censored').forEach(el => {
-      el.addEventListener('click', () => {
-        el.textContent = el.dataset.original;
-        el.classList.remove('word-censored');
-        el.classList.add('word');
-        el.style.color = 'var(--accent)';
-      });
-    });
-
-    // Click subtitle line → seek to that timestamp
-    container.querySelectorAll('.subtitle-line').forEach(el => {
-      el.addEventListener('click', (e) => {
-        if (e.target.closest('.word') || e.target.closest('.word-censored')) return;
-        const idx = parseInt(el.dataset.subIndex);
+    // Use event delegation: single listener no container captura clicks em .word e .word-censored
+    container.addEventListener('click', (e) => {
+      var wordEl = e.target.closest('.word');
+      if (wordEl) {
+        var word = wordEl.dataset.word;
+        if (word) showWordTranslation(word, wordEl.closest('.subtitle-line'));
+        return;
+      }
+      var censoredEl = e.target.closest('.word-censored');
+      if (censoredEl) {
+        censoredEl.textContent = censoredEl.dataset.original;
+        censoredEl.classList.remove('word-censored');
+        censoredEl.classList.add('word');
+        censoredEl.style.color = 'var(--accent)';
+        return;
+      }
+      var lineEl = e.target.closest('.subtitle-line');
+      if (lineEl) {
+        var idx = parseInt(lineEl.dataset.subIndex);
         if (!isNaN(idx) && currentClip && currentClip.subtitles[idx]) {
-          const time = currentClip.subtitles[idx].timeSeconds;
+          var time = currentClip.subtitles[idx].timeSeconds;
           if (movieYTPlayer && typeof movieYTPlayer.seekTo === 'function') {
             movieYTPlayer.seekTo(time, true);
             movieYTPlayer.playVideo();
           }
         }
-      });
+      }
     });
   }
 
