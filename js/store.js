@@ -399,6 +399,7 @@ const Store = (() => {
     var t = getTrack();
     if (t.tabsVisited.indexOf(tabId) === -1) t.tabsVisited.push(tabId);
     var today = new Date().toISOString().split('T')[0];
+    if (!t.dailyTabs) t.dailyTabs = {};
     if (!t.dailyTabs[today]) t.dailyTabs[today] = {};
     t.dailyTabs[today][tabId] = true;
     // Track music→study flow
@@ -411,6 +412,7 @@ const Store = (() => {
   function recordClipWatch(clipId) {
     var t = getTrack();
     var today = new Date().toISOString().split('T')[0];
+    if (!t.clipsWatched) t.clipsWatched = {};
     if (!t.clipsWatched[today]) t.clipsWatched[today] = [];
     if (t.clipsWatched[today].indexOf(clipId) === -1) t.clipsWatched[today].push(clipId);
     saveTrack(t);
@@ -420,6 +422,7 @@ const Store = (() => {
     var t = getTrack();
     t.translationsOpened++;
     var today = new Date().toISOString().split('T')[0];
+    if (!t.dailyTranslations) t.dailyTranslations = {};
     if (!t.dailyTranslations[today]) t.dailyTranslations[today] = 0;
     t.dailyTranslations[today]++;
     saveTrack(t);
@@ -445,6 +448,7 @@ const Store = (() => {
     if (!t.songPlayCount) t.songPlayCount = {};
     t.songPlayCount[key] = (t.songPlayCount[key] || 0) + 1;
     var today = new Date().toISOString().split('T')[0];
+    if (!t.dailySongs) t.dailySongs = {};
     if (!t.dailySongs[today]) t.dailySongs[today] = [];
     if (t.dailySongs[today].indexOf(key) === -1) t.dailySongs[today].push(key);
     saveTrack(t);
