@@ -272,6 +272,7 @@ const MusicTab = (() => {
   }
 
   function handleKaraokeClick(e) {
+    console.log('[MUSIC] karaoke click, target:', e.target.className, 'closest .word:', e.target.closest('.word')?.getAttribute('data-word'));
     try {
       var wordEl = e.target.closest('.word');
       if (wordEl) {

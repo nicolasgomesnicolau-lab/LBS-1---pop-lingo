@@ -702,9 +702,11 @@ const MoviesTab = (() => {
   }
 
   function bindSubtitleEvents(container) {
-    // Word click for translation
-    container.querySelectorAll('.word').forEach(el => {
-      el.addEventListener('click', () => {
+    const words = container.querySelectorAll('.word');
+    console.log('[MOVIES] bindSubtitleEvents:', words.length, 'words found');
+    words.forEach(el => {
+      el.addEventListener('click', (e) => {
+        console.log('[MOVIES] CLICK detected on word:', el.dataset.word, 'target:', e.target.className);
         const word = el.dataset.word;
         if (word) showWordTranslation(word, el.closest('.subtitle-line'));
       });
