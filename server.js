@@ -185,9 +185,18 @@ http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost:' + PORT);
   const method = req.method;
 
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin || '';
+  if (origin && (origin.startsWith('http://localhost') || origin === 'https://lbs-1-pop-lingo.onrender.com')) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (!origin) {
+    res.setHeader('Access-Control-Allow-Origin', 'https://lbs-1-pop-lingo.onrender.com');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');
 
   if (method === 'OPTIONS') {
     res.writeHead(204);
@@ -1004,10 +1013,14 @@ function doYouTubeVideoInfo(videoId) {
       res.end('404');
       return;
     }
-    res.writeHead(200, {
+    var headers = {
       'Content-Type': MIME[ext] || 'application/octet-stream',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
-    });
+    };
+    if (ext === '.html') {
+      headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src https://www.youtube.com; img-src 'self' https://img.youtube.com data:; connect-src 'self' https://openrouter.ai";
+    }
+    res.writeHead(200, headers);
     res.end(data);
   });
 }).listen(PORT, () => {
