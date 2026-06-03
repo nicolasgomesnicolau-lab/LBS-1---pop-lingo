@@ -1,0 +1,20 @@
+name: DAST Scan
+
+on:
+  push:
+    branches: [ main ] # Roda toda vez que você atualizar o código
+  workflow_dispatch: # Permite que você rode manualmente clicando num botão no GitHub
+
+jobs:
+  zap_scan:
+    runs-on: ubuntu-latest
+    name: Scan de Segurança Dinâmico (DAST)
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'https://lbs-1-pop-lingo.onrender.com' # Seu link do Render
+          fail_action: false # Se encontrar erro, não trava o build (para começar)
