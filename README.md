@@ -1,134 +1,163 @@
-# 🎬 Pop Lingo — Aprenda Inglês com Filmes, Música e IA
+# Pop Lingo
 
-Foco em **memorizar palavras e traduções** através de contexto real. O app funciona em ciclo: você encontra uma palavra nova nos filmes ou músicas → traduz → salva na sua biblioteca → revisa no **Study** até fixar.
-
-> **Live app:** [https://lbs-1-pop-lingo.onrender.com](https://lbs-1-pop-lingo.onrender.com)
-
----
-
-## How It Works
-
-### 📚 Study (Núcleo)
-Sua **biblioteca de palavras salvas** fica aqui. Você revisa as traduções, marca se acertou ou errou, e acompanha seu progresso diário. É onde a memorização acontece.
-
-### 🎥 Movies
-Assista clipes de filmes/séries com legendas sincronizadas. Toque em qualquer palavra para ver a tradução. **Salve na biblioteca** com um clique — a palavra vai direto pro Study. Ative o modo **Just Heard** para testar se você entendeu o que ouviu antes de ler.
-
-### 🎵 Music
-Busque músicas no YouTube, toque com legendas em karaokê geradas por IA. Mesma lógica: toque numa palavra → traduz → salva na biblioteca → aparece no Study.
-
-### 💬 Chat
-Tire dúvidas em português sobre palavras, frases ou gramática inglesa. A IA responde em português direto, sem firulas.
-
-### 👤 Perfil
-Aba com **estatísticas do usuário** (palavras salvas, acertos, sequência de dias), **gráfico de atividade** (heatmap 28 dias), **grade de conquistas** com filtro por categoria, e **leaderboard** ranqueando usuários por número de conquistas desbloqueadas, incluindo perfis falsos com avatares.
-
-### 🏆 Conquistas (Achievements)
-Sistema de **74 conquistas** em 7 categorias (Vocabulário, Biblioteca, Study, Sequência, Consistência, Music, Movies, Especiais, Secretas) com 7 ranks (Bronze → Lenda). As conquistas são verificadas automaticamente conforme você usa o app — salva palavras, assiste clipes, estuda músicas, mantém sequências, etc. Os dados ficam em `localStorage` e são sincronizados ao Supabase quando logado.
-
-### 📖 Modos de Estudo
-- **Normal**: Flashcards com todas as palavras da biblioteca
-- **Revisão**: Apenas palavras que você errou, em rodadas até acertar todas
-- **Ranked**: 2 vidas, perde tudo ao errar — tela de derrota se falhar
-- **Soft Match**: Digitação com tolerância a typos (Levenshtein ≤1 para palavras curtas, ≤2 para ≥5 caracteres)
+Aprenda inglês com filmes, músicas e IA.  
+**→ [https://lbs-1-pop-lingo.onrender.com](https://lbs-1-pop-lingo.onrender.com)**
 
 ---
 
-## APIs & Services Used
+## Segurança
 
-| Service | Usage | Endpoint / Key |
+Tudo que o app faz pra proteger seus dados.
+
+### Headers HTTP
+
+Toda resposta do servidor envia esses headers:
+
+| Header | Valor |
+|---|---|
+| `Content-Security-Policy` | `default-src 'self'; script-src 'self' 'unsafe-inline' https://www.youtube.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src https://www.youtube.com; img-src 'self' https://img.youtube.com data:; connect-src 'self' https://openrouter.ai; frame-ancestors 'self'; form-action 'self'` |
+| `X-Content-Type-Options` | `nosniff` |
+| `X-Frame-Options` | `DENY` |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=(), interest-cohort=()` |
+| `Cross-Origin-Embedder-Policy` | `require-corp` |
+| `Cross-Origin-Opener-Policy` | `same-origin` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Access-Control-Allow-Origin` | `https://lbs-1-pop-lingo.onrender.com` |
+| `Access-Control-Allow-Methods` | `GET, POST, OPTIONS` |
+| `Access-Control-Allow-Headers` | `Content-Type` |
+
+**+** CSP adicional só em páginas HTML (`server.js:1016`).
+
+### CSP — o que cada diretiva faz
+
+| Diretiva | Permite | Por quê |
 |---|---|---|
-| **YouTube Data API v3** | Search videos & fetch metadata | `YT_API_KEY` |
-| **yt-search** (fallback) | Search YouTube when API quota is exceeded | — |
-| **OpenRouter** | AI translation & chat (via free models) | `OPENROUTER_KEY` |
-| **Jarvis Karaoke API** | AI-powered karaoke transcription from audio | `KARAOKE_NGROK` + `KARAOKE_API_KEY` |
-| **Supabase** | Authentication (JWT) & database for movies and user vocab | `SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY` |
-| **Render** | Web hosting | [render.com](https://render.com) |
+| `default-src 'self'` | Só o próprio domínio | Fallback de segurança |
+| `script-src` | `'self'`, `'unsafe-inline'`, YouTube | SPA precisa de inline; YouTube pra player de vídeo |
+| `style-src` | `'self'`, `'unsafe-inline'`, Google Fonts | Inline pra UI dinâmica |
+| `font-src` | `'self'`, Google Fonts | Fonte do Google |
+| `frame-src` | YouTube | Só YouTube pode ser iframe |
+| `img-src` | `'self'`, YouTube, `data:` | Thumbnails e avatares |
+| `connect-src` | `'self'`, OpenRouter | API de IA |
+| `frame-ancestors` | `'self'` | Ninguém coloca o app num iframe |
+| `form-action` | `'self'` | Formulário só pro mesmo domínio |
 
----
+### XSS (Cross-Site Scripting)
 
-## Supabase Setup
+Toda entrada do usuário passa por `escapeHtml()` antes de ir pro DOM:
 
-This app uses Supabase for authentication (JWT login) and shared data storage (movies + user vocabulary).
-
-1. Create a project at [supabase.com](https://supabase.com)
-2. Go to **SQL Editor** and run the script from [`supabase-init.sql`](./supabase-init.sql) to create the required tables
-3. In **Auth > Settings**, disable **"Confirm email"** so users can sign up without email verification
-4. Copy your project URL and anon key to `.env`:
-   ```env
-   SUPABASE_URL=https://your-project.supabase.co
-   SUPABASE_PUBLISHABLE_KEY=your-anon-key
-   ```
-
-## Running with Docker
-
-> ⚠️ The `.env` file with API keys is **not committed** to the repository. You must provide your own credentials.
-
-### Prerequisites
-- [Docker](https://docker.com)
-- A **Jarvis API** instance for karaoke transcription ([repo](https://github.com/nicolasgomesnicolau-lab/LBS-1---API-JARVIS-for-POP-LINGO))
-
-### Quick Start
-
-1. **Clone the repo:**
-   ```bash
-   git clone https://github.com/nicolasgomesnicolau-lab/LBS-1---pop-lingo.git
-   cd LBS-1---pop-lingo
-   ```
-
-2. **Create your `.env` file** (copy from `.env.example` and fill in the keys)
-
-3. **Build and run:**
-   ```bash
-   docker build -t pop-lingo .
-   docker run -p 8000:8000 --env-file .env pop-lingo
-   ```
-
-4. Open **http://localhost:8000** in your browser.
-
----
-
-## Project Structure
-
-```
-├── server.js           # HTTP server: API routes + static files
-├── supabase.js         # Supabase client (auth + database)
-├── dict.js             # Built-in English→Portuguese dictionary
-├── dockerfile          # Docker build config
-├── index.html          # Main SPA entry point
-├── supabase-init.sql   # SQL script to initialize Supabase tables
-├── css/
-│   ├── index.css       # Global styles
-│   └── components.css  # Reusable UI components
-├── js/
-│   ├── app.js          # App shell: tabs, router, UI helpers
-│   ├── auth.js         # Login/signup via Supabase JWT
-│   ├── ai.js           # Translation client (calls server /api/translate)
-│   ├── movies.js       # Movies tab: list, player, admin, server sync
-│   ├── music.js        # Music tab: search, YouTube player, karaoke
-│   ├── store.js        # Data layer (localStorage + Supabase sync)
-│   ├── achievements.js # Achievement definitions, checks, ranks, server sync
-│   ├── profile.js      # Profile tab: stats, heatmap, leaderboard, avatars
-│   └── chat.js         # Chat tab: messages, AI conversation
-├── data/
-│   ├── movies.json     # Local fallback for movie data
-│   └── karaoke_cache/  # Cached Jarvis transcriptions (gitignored)
-└── .env.example        # Template for environment variables
+```js
+function escapeHtml(str) {
+  var d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
 ```
 
+Usa o **próprio navegador** pra escapar — sem regex, sem blacklist, sem risco de bypass.
+
+Essa função existe em **7 arquivos** diferentes e é usada em **dezenas de pontos**:
+
+| Arquivo | O que protege |
+|---|---|
+| `js/app.js` | Toast de notificação |
+| `js/chat.js` | Mensagens do usuário, respostas da IA, botões de sugestão, palavras salvas |
+| `js/music.js` | Títulos, artistas, videoId, karaokê, erros, buscas |
+| `js/movies.js` | Nomes de série, títulos de clipe, legendas, admin panel |
+| `js/study.js` | Flashcards, palavras, traduções, feedback |
+| `js/vocab.js` | Palavras e traduções na biblioteca |
+| `js/profile.js` | Nomes no leaderboard |
+
+### Sanitização extra
+
+Além do `escapeHtml()`, cada feature tem camadas adicionais:
+
+- **YouTube videoId** (`music.js:249`): `str.replace(/[^a-zA-Z0-9_-]/g, '')` — só caracteres seguros no iframe
+- **Legendas** (`movies.js:344`): `word.replace(/[^a-zA-Z'-]/g, '')` — whitelist no clique de palavra
+- **Karaokê** (`music.js:271`): `str.replace(/[^\w\s',!?.%-]/g, '')` — filtra caracteres especiais
+- **Dicionário** (`server.js:870`): Extração de `<script>` por `indexOf` em vez de regex (evita ReDoS e bypass)
+- **Texto de busca** (`ai.js:5`): `str.replace(/[^a-zA-ZÀ-ÿ']/g, '')` — só letras na query de tradução
+
+### CORS
+
+Único origem permitida, hardcoded, sem reflection:
+
+```js
+res.setHeader('Access-Control-Allow-Origin', 'https://lbs-1-pop-lingo.onrender.com');
+```
+
+Sem `req.headers.origin`, sem wildcard. Métodos: `GET, POST, OPTIONS`. Headers: `Content-Type`.
+
+### Autenticação
+
+- **Supabase JWT** — login com email/senha ou anônimo
+- Token armazenado em `localStorage` com a chave `lbs_auth_session`
+- CSP impede qualquer script externo de ler o `localStorage`
+- Rota `/api/auth/me` verifica o token em toda requisição
+- **Row-Level Security** no Supabase — cada usuário só vê os próprios dados (vocab, achievements, tracking, playlist)
+
+Tabelas com RLS ativo: `vocab_data`, `achievements_data`, `tracking_data`, `playlist_data`.  
+Tabela sem RLS (pública): `movies_data`.
+
+### Admin
+
+Sessão admin com token aleatório de 32 caracteres, armazenado em memória (`Map`). Senha via variável de ambiente.
+
+### Como as chaves de API são protegidas
+
+Todas as chaves ficam em **variáveis de ambiente**, nunca no código fonte:
+
+```env
+OPENROUTER_KEY → chamadas de IA (server-side)
+YT_API_KEY     → YouTube Data API (server-side)
+KARAOKE_API_KEY → transcrição de áudio (server-side)
+ADMIN_PASSWORD  → painel admin (server-side)
+SUPABASE_URL + SUPABASE_PUBLISHABLE_KEY → banco e auth
+```
+
+Nenhuma chave é exposta ao cliente. As chamadas pra YouTube, OpenRouter e Jarvis saem do servidor, não do navegador.
+
+### Docker
+
+```dockerfile
+FROM node:24-alpine    # Alpine = imagem mínima, menos vulnerabilidades
+USER node              # Roda como usuário não-root
+EXPOSE 8000            # Só uma porta exposta
+```
+
+`.dockerignore` exclui `.env`, `node_modules`, `data` — nada vaza pra imagem.
+
+### MIME types
+
+Servidor usa um mapa de extensões → MIME types. Qualquer extensão desconhecida cai pra `application/octet-stream`. Combinado com `X-Content-Type-Options: nosniff`, o browser não tenta adivinhar o tipo do arquivo.
+
+### Validação de requisições
+
+Toda rota valida `method` + `pathname` antes de processar. Inputs críticos têm validação extra:
+
+- `/search`: query não pode ser vazia
+- `/api/chat`: `messages` precisa ser array
+- `/api/auth/signup`: email e senha obrigatórios
+- `/api/spotify-playlist`: URL precisa conter `spotify.com/playlist/`
+
+### Scanners automáticos (CI/CD)
+
+Quatro workflows no GitHub Actions:
+
+| Scanner | O que analisa | Quando roda |
+|---|---|---|
+| **CodeQL** | Código JS — busca vulnerabilidades estáticas (XSS, injeção, etc) | Push/PR na main |
+| **Semgrep** | Padrões OWASP Top 10, CWE, secrets vazados | Push na main |
+| **ZAP Baseline** | Scan dinâmico contra o site ao vivo no Render | Push na main + manual |
+| **npm audit** | Dependências com falhas conhecidas (nível high+) | Push na main |
+
+Dependência overrided no `package.json`: `minimatch ^3.1.2` (CVE em versões anteriores).
+
+### Path traversal
+
+O servidor usa `path.join()` pra montar caminhos de arquivo, que normaliza `../` tentativas. Qualquer path que saia do diretório do projeto é barrado.
+
 ---
 
-## Data Persistence
-
-- **Movies & Vocab** are stored in **Supabase** (`movies_data` and `vocab_data` tables). Movies are visible to everyone; vocab is per-user (requires login).
-- **`data/movies.json`** is kept as a local fallback (synced from Supabase when available).
-- **`data/karaoke_cache/`** is gitignored. Transcriptions are regenerated on demand and cached server-side.
-- **User playlists, music history, settings, and achievement state** are stored in `localStorage`.
-- **Achievements & tracking data** sync to Supabase per-user when logged in (`achievements_data` and `tracking_data` tables) for cross-device persistence.
-- **Auth sessions** use Supabase JWT tokens stored in `localStorage`.
-
----
-
-## License
-
-MIT
+**Projeto:** Node.js puro (sem Express), Docker, Supabase, YouTube Data API
