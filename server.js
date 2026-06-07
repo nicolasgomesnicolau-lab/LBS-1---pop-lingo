@@ -192,7 +192,6 @@ http.createServer((req, res) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');
-  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
 
   if (method === 'OPTIONS') {
