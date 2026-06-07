@@ -449,21 +449,49 @@ const ProfileTab = (() => {
 
     var html = '';
 
-    // Profile Header - avatar, nome, rank e barra de progresso
+    // Profile Header
+    html += '<div class="profile-header">';
+    var bgColor = getBgColor();
+    var avatarStyle = bgColor ? 'style="background:' + bgColor + ';border:3px solid rgba(255,255,255,0.15)"' : '';
+    html += '<div class="profile-avatar clickable" id="profile-avatar-btn" ' + avatarStyle + '>' + avatarDisplay + '</div>';
+    html += '<div class="profile-name">' + (email ? escapeHtml(email.replace(/@.+/, '')) : 'Visitante') + '</div>';
+    html += '<div class="profile-rank-badge">' + rank.label + '</div>';
+    html += '<div class="profile-rank-progress">';
+    html += '<div class="profile-rank-labels"><span>' + rank.label.replace(/^[^\s]+\s/, '') + '</span><span>' + (nextRank ? nextRank.label.replace(/^[^\s]+\s/, '') : 'MAX') + '</span></div>';
+    html += '<div class="progress-bar"><div class="progress-bar-fill" style="width:' + progressPct + '%"></div></div>';
+    html += '<div class="profile-rank-labels"><span>' + achievedCount + ' conquistas</span><span>' + (nextRank ? nextRank.min + ' necessários' : 'Completo!') + '</span></div>';
+    html += '</div></div>';
 
-    // Stats Grid - palavras, sequência, acertos, dias
+    // Stats Grid
+    html += '<div class="profile-stats">';
+    html += '<div class="profile-stat-item"><span class="profile-stat-icon">📚</span><div class="profile-stat-value">' + wordCount + '</div><div class="profile-stat-label">Palavras</div></div>';
+    html += '<div class="profile-stat-item"><span class="profile-stat-icon">🔥</span><div class="profile-stat-value">' + currentStreak + '</div><div class="profile-stat-label">Sequência</div></div>';
+    html += '<div class="profile-stat-item"><span class="profile-stat-icon">🎯</span><div class="profile-stat-value">' + totalCorrect + '</div><div class="profile-stat-label">Acertos</div></div>';
+    html += '<div class="profile-stat-item"><span class="profile-stat-icon">📅</span><div class="profile-stat-value">' + totalDays + '</div><div class="profile-stat-label">Dias</div></div>';
+    html += '</div>';
 
-    // Cor de Fundo - seletor de cor do avatar
+    // Cor de Fundo
+    html += renderBgColorPicker();
 
-    // Rank Progression - seção colapsável de elos
+    // Rank Progression (collapsible)
+    html += renderRankProgression();
 
-    // Activity Graph - calendário de atividade diária
+    // Activity Graph
+    html += '<div class="profile-section">';
+    html += '<div class="profile-section-header"><h2>📊 Atividade</h2></div>';
+    html += renderActivityGraph();
+    html += '</div>';
 
-    // Achievements - grade de conquistas com filtro
+    // Achievements
+    html += '<div class="profile-section" id="profile-achievements-section">';
+    html += '<div class="profile-section-header"><h2>🏆 Conquistas</h2></div>';
+    html += renderAchievements(currentFilter);
+    html += '</div>';
 
-    // Leaderboard - tabela de classificação
+    // Leaderboard
+    html += renderLeaderboard();
 
-    // Avatar picker modal (hidden) - overlay para escolher avatar
+    // Avatar picker modal (hidden)
     html += renderAvatarPicker();
 
     return html;
@@ -473,19 +501,83 @@ const ProfileTab = (() => {
   function bindEvents(container) {
     if (!container) return;
 
-    // Avatar button - abre o seletor de avatar ao clicar
+    // Avatar button - open picker
+    var avatarBtn = container.querySelector('#profile-avatar-btn');
+    if (avatarBtn) {
+      avatarBtn.addEventListener('click', function() {
+        var overlay = document.getElementById('avatar-picker-overlay');
+        if (overlay) overlay.classList.add('visible');
+      });
+    }
 
-    // Fecha o modal do seletor de avatar pelo botão X
+    // Close avatar picker
+    var closeBtn = container.querySelector('#avatar-picker-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function() {
+        var overlay = document.getElementById('avatar-picker-overlay');
+        if (overlay) overlay.classList.remove('visible');
+      });
+    }
 
-    // Fecha o modal clicando fora (no overlay)
+    // Click on overlay to close
+    var overlay = container.querySelector('#avatar-picker-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) overlay.classList.remove('visible');
+      });
+    }
 
-    // Cada opção de avatar: salva e atualiza na UI
+    // Avatar picker options
+    var options = container.querySelectorAll('.avatar-picker-option');
+    for (var k = 0; k < options.length; k++) {
+      options[k].addEventListener('click', function(e) {
+        var emoji = e.currentTarget.dataset.avatar;
+        if (emoji) {
+          setAvatar(emoji);
+          var avatarEl = document.querySelector('#profile-avatar-btn');
+          if (avatarEl) avatarEl.textContent = emoji;
+          var ov = document.getElementById('avatar-picker-overlay');
+          if (ov) ov.classList.remove('visible');
+          updateLeaderboardAvatar(emoji);
+        }
+      });
+    }
 
-    // Expande/recolhe a seção de progressão de elos
+    // Rank toggle
+    var rankToggle = container.querySelector('#rank-toggle');
+    if (rankToggle) {
+      rankToggle.addEventListener('click', function() {
+        var body = document.getElementById('rank-body');
+        var arrow = this.querySelector('.collapse-arrow');
+        if (body) {
+          body.classList.toggle('open');
+          if (arrow) arrow.textContent = body.classList.contains('open') ? '▼' : '▶';
+        }
+      });
+    }
 
-    // Alterna entre 1 e 4 semanas no gráfico de atividade, re-renderizando apenas essa seção
+    // Activity expand toggle
+    var expandBtn = container.querySelector('#activity-expand-btn');
+    if (expandBtn) {
+      expandBtn.addEventListener('click', function() {
+        activityExpanded = !activityExpanded;
+        var section = this.closest('.profile-section');
+        if (section) {
+          var header = section.querySelector('.profile-section-header');
+          section.innerHTML = header ? header.outerHTML + renderActivityGraph() : renderActivityGraph();
+          bindEvents(section);
+        }
+      });
+    }
 
-    // Aplica a cor de fundo ao clicar num chip de cor
+    // Background color chips
+    var colorChips = container.querySelectorAll('.bg-color-chip');
+    for (var ci = 0; ci < colorChips.length; ci++) {
+      colorChips[ci].addEventListener('click', function(e) {
+        var color = e.currentTarget.dataset.color;
+        if (color) applyBgColor(color);
+      });
+    }
 
     // Filtro de categorias de conquistas: atualiza a grid e re-binda eventos
     var chips = container.querySelectorAll('.achievement-filter .chip');
